@@ -207,10 +207,15 @@ function matchScore(c, p) {
   const tipos = c.tipos || []; const zonas = (c.zonas || '').split(/[,;]+/).map(x => x.trim()).filter(Boolean);
   why.push({ ok: true, t: p.operacion });
   if (tipos.length) { if (tipoMatch(tipos, p.tipo)) { s += 25; why.push({ ok: true, t: p.tipo }); } else return null; } else { s += 15; }
-  if (zonas.length) { if (zonaMatch(zonas, p)) { s += 25; why.push({ ok: true, t: p.zona || p.municipio }); } else { why.push({ ok: false, t: 'Zona distinta' }); } } else { s += 12; }
+  const GENERICAS = ['madrid', 'madrid capital', 'comunidad de madrid', 'centro'];
+  const zEsp = zonas.filter(z => !GENERICAS.includes(norm(z)));
+  if (zEsp.length) { if (zonaMatch(zEsp, p)) { s += 25; why.push({ ok: true, t: zEsp.find(z => zonaMatch([z], p)) || p.zona || p.municipio }); } else return null; }
+  else if (zonas.length) { if (zonaMatch(zonas, p) || norm(p.municipio) === 'madrid') { s += 12; why.push({ ok: true, t: 'Madrid' }); } else return null; }
+  else { s += 10; }
   const max = num(c.precioMax), min = num(c.precioMin), pr = num(p.precio);
   if (pr && max) {
-    if (pr <= max && (!min || pr >= min * 0.8)) { s += 30; why.push({ ok: true, t: 'Precio en rango' }); }
+    if (pr <= max && pr < max * 0.3 && !min) { s += 8; why.push({ ok: 'warn', t: 'Muy por debajo del presupuesto' }); }
+    else if (pr <= max && (!min || pr >= min * 0.8)) { s += 30; why.push({ ok: true, t: 'Precio en rango' }); }
     else if (pr <= max * 1.1) { s += 18; why.push({ ok: 'warn', t: '+' + Math.round((pr / max - 1) * 100) + ' % s/ presupuesto' }); }
     else if (pr <= max * 1.2) { s += 8; why.push({ ok: false, t: '+' + Math.round((pr / max - 1) * 100) + ' % s/ presupuesto' }); }
     else return null;
