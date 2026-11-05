@@ -55,8 +55,9 @@ TRANSVERSAL
   tiempo real entre los dos usuarios, caché offline y cola de cambios sin conexión.
 - PWA: manifest con el logo de Concept Studio Homes, nombre "Concept Studio" bajo el
   icono, modo standalone, service worker, barra inferior en móvil.
-- Identidad: Unbounded + Inter, naranja #ff7440, azul #3f6efc, marino #212934, con
-  degradados y tarjetas de color en el dashboard.
+- Identidad de www.conceptstudiohomes.com: tipografía Unbounded en toda la app y solo
+  tres colores: gris claro #efefef, gris oscuro #212934/#444444 y naranja #ff7440.
+  Dashboard con tarjetas en gris oscuro y naranja (no pálido).
 
 RESTRICCIONES
 - No inventar datos. Sin DNI de titulares en la base salvo en el parte de visita firmado.
