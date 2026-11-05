@@ -4,7 +4,7 @@ const SB_URL = 'https://rvuoqfsuswjnyytvitqb.supabase.co';
 const SB_KEY = 'sb_publishable_7q_dWNCm_UN3-DNw_cK_Ow_fRYG2s07';
 const ASSET = SB_URL + '/storage/v1/object/public/csh-public/';
 const BUCKET = 'csh-docs';
-const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'csh-crm-auth' } });
 
 const S = { user: null, me: null, equipo: [], recs: new Map(), view: 'dashboard', online: navigator.onLine, sync: 'ok', ui: {} };
 

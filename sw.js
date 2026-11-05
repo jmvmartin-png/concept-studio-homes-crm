@@ -1,4 +1,4 @@
-const V='csh-crm-v3.1.0';
+const V='csh-crm-v3.1.1';
 const CORE=['./','./index.html','./styles.css','./js/core.js','./js/views.js','./js/forms.js','./vendor/supabase.js','./manifest.webmanifest',
  'https://rvuoqfsuswjnyytvitqb.supabase.co/storage/v1/object/public/csh-public/logo.png',
  'https://rvuoqfsuswjnyytvitqb.supabase.co/storage/v1/object/public/csh-public/icon-192.png'];
