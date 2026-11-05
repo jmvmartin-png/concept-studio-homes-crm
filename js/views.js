@@ -396,28 +396,44 @@ function quickAdd() {
 async function syncCarpeta() {
   const out = $('#syncOut');
   if (!window.showDirectoryPicker) { out.innerHTML = 'Esta función necesita Chrome o Edge en un ordenador.'; return; }
-  let dir; try { dir = await window.showDirectoryPicker({ mode: 'read' }); } catch (e) { return; }
-  const log = []; let nuevos = 0, enlazados = 0, colNuevos = 0;
-  const findCol = nombre => list('contacto').find(c => norm(c.nombre) === norm(nombre));
+  let dir; try { dir = await window.showDirectoryPicker({ id: 'nuestros', mode: 'read' }); } catch (e) { return; }
+  out.innerHTML = 'Leyendo carpetas…';
+  const res = await importarCarpetas(dir, n => { out.innerHTML = 'Leyendo carpetas… ' + n; });
+  out.innerHTML = `<b>Sincronización terminada.</b> ${res.inm} inmuebles nuevos · ${res.dem} demandas nuevas · ${res.col} colaboradores nuevos · ${res.upd} actualizados.`;
+  toast('Carpeta sincronizada');
+}
+async function leerFicha(h) { try { const f = await h.getFileHandle('FICHA.md'); return await (await f.getFile()).text(); } catch (e) { return ''; } }
+async function importarCarpetas(dir, progress) {
+  const recs = []; const res = { inm: 0, dem: 0, col: 0, upd: 0 }; let n = 0;
+  const cols = new Map(list('contacto').map(c => [norm(c.nombre), c]));
+  const colId = (nombre, tel) => { const k = norm(nombre); let c = cols.get(k);
+    if (!c) { c = { id: 'con_col_' + k.replace(/[^a-z0-9]+/g, '-'), nombre, telefono: tel || '', roles: ['Colaborador'], estado: 'Cliente', origen: 'Colaborador', agente: S.me?.nombre, fechaAlta: today(), intent: '', tipos: [], extras: [], adjuntos: [], notas: 'Colaborador · creado desde la carpeta NUESTROS CAPTACION' }; cols.set(k, c); recs.push(['contacto', c]); res.col++; }
+    else if (!esColaborador(c) || (!c.telefono && tel)) { c = { ...c, roles: [...new Set([...(c.roles || []), 'Colaborador'])], telefono: c.telefono || tel || '' }; cols.set(k, c); recs.push(['contacto', c]); }
+    return c.id; };
   for await (const [name, h] of dir.entries()) {
-    if (h.kind !== 'directory') continue; const info = parseCarpeta(name); if (!info) continue;
-    let nDocs = 0, nFotos = 0;
-    try { for await (const [fn, fh] of h.entries()) { if (fh.kind === 'file') { /\.(jpe?g|png|webp|heic)$/i.test(fn) ? nFotos++ : nDocs++; } else if (/foto/i.test(fn)) { for await (const [, f2] of fh.entries()) if (f2.kind === 'file') nFotos++; } } } catch (e) { }
-    let colId = '';
-    if (info.colaborador) {
-      let c = findCol(info.colaborador);
-      if (!c) { const id = 'con_col_' + norm(info.colaborador).replace(/[^a-z0-9]+/g, '-'); await save('contacto', { id, nombre: info.colaborador, roles: ['Colaborador'], estado: 'Cliente', origen: 'Colaborador', agente: S.me?.nombre, fechaAlta: today(), intent: '', tipos: [], extras: [], adjuntos: [], notas: 'Colaborador · creado desde la carpeta NUESTROS CAPTACION' }, { silent: true }); colNuevos++; c = get(id); log.push('Colaborador nuevo: ' + info.colaborador); }
-      else if (!esColaborador(c)) { c.roles = [...new Set([...(c.roles || []), 'Colaborador'])]; await save('contacto', c, { silent: true }); }
-      colId = c.id;
+    if (h.kind !== 'directory') continue; n++; if (n % 10 === 0) progress && progress(n);
+    if (/^DM\s*-?\s*\d+/i.test(name)) {
+      const d = parseDM(name, await leerFicha(h)); if (!d) continue; const id = 'con_' + d.ref;
+      if (!get(id)) { recs.push(['contacto', { id, ...d.contacto }]); res.dem++; }
+      continue;
     }
+    const info = parseCarpeta(name); if (!info) continue;
+    const fi = parseFicha(await leerFicha(h));
+    let nDocs = 0, nFotos = 0;
+    try { for await (const [fn, fh] of h.entries()) { if (fh.kind === 'file') { if (fn === 'FICHA.md') continue; /\.(jpe?g|png|webp|heic)$/i.test(fn) ? nFotos++ : nDocs++; } else if (/foto/i.test(fn)) { for await (const [, f2] of fh.entries()) if (f2.kind === 'file') nFotos++; } } } catch (e) { }
+    const tipoSeg = name.split(/\s+-\s+/).slice(-2, -1)[0] || '';
+    const tipo = mapTipo(tipoSeg) || info.tipo;
+    const cid = info.colaborador ? colId(info.colaborador, fi.telefono) : '';
     const pid = 'inm_' + info.ref; const p = get(pid);
     if (!p) {
-      await save('inmueble', { id: pid, ref: info.ref, estado: 'Captación', operacion: 'Venta', tipo: info.tipo, direccion: info.direccion, municipio: 'Madrid', provincia: 'Madrid', captacion: info.captacion, colaboradorId: colId, contacto: info.colaborador || '', rol: info.colaborador ? 'Colaborador' : '', agente: S.me?.nombre, fecha: today(), prioridad: 'Media', exclusiva: 'No', docs: {}, portales: {}, adjuntos: [], extras: [], nDocs, nFotos, carpeta: 'NUESTROS CAPTACION\\' + name }, { silent: true });
-      logAct(pid, 'Inmueble creado desde la carpeta de captación'); nuevos++; log.push('Nuevo inmueble ' + info.ref + ' · ' + (info.colaborador ? 'colaborador ' + info.colaborador : 'captación propia'));
-    } else if (p.captacion !== info.captacion || (p.colaboradorId || '') !== colId || p.nFotos !== nFotos || p.nDocs !== nDocs) {
-      p.captacion = info.captacion; p.colaboradorId = colId; p.nFotos = nFotos; p.nDocs = nDocs; await save('inmueble', p, { silent: true }); enlazados++;
+      const dirTxt = fi.titulo ? fi.titulo.split(' · ').slice(-1)[0] : info.direccion;
+      recs.push(['inmueble', { id: pid, ref: info.ref, estado: 'Captación', operacion: fi.operacion || (/ALQUILER/i.test(tipoSeg) ? 'Alquiler' : 'Venta'), tipo, direccion: titleCase(dirTxt || info.direccion), zona: '', municipio: /MALAGA|MALLORCA|ALBACETE|CANTABRIA|ALICANTE|LUGO|PARLA|MOSTOLES|ALCOBENDAS|TRES CANTOS|LAS ROZAS|GUADALIX/i.test(name) ? '' : 'Madrid', provincia: '', precio: fi.precio, m2c: fi.m2, hab: fi.hab, captacion: info.captacion, colaboradorId: cid, contacto: info.colaborador || '', rol: info.colaborador ? 'Colaborador' : '', telefono: fi.telefono || '', agente: S.me?.nombre, fecha: fi.fecha || today(), prioridad: 'Media', exclusiva: 'No', docs: {}, portales: {}, adjuntos: [], extras: [], nDocs, nFotos, origen: fi.origen || '', notas: fi.mensaje || '', carpeta: 'NUESTROS CAPTACION\\' + name }]); res.inm++;
+    } else if (p.captacion !== info.captacion || (p.colaboradorId || '') !== cid || p.nFotos !== nFotos || p.nDocs !== nDocs) {
+      recs.push(['inmueble', { ...p, captacion: info.captacion, colaboradorId: cid, nFotos, nDocs }]); res.upd++;
     }
   }
-  out.innerHTML = `<b>Sincronización terminada.</b> ${nuevos} inmuebles nuevos · ${enlazados} actualizados · ${colNuevos} colaboradores nuevos.${log.length ? '<br>' + log.map(esc).join('<br>') : ''}`;
-  toast('Carpeta sincronizada');
+  const rows = recs.map(([tipo, o]) => { const d = clean(o); return { id: o.id, tipo, data: d }; });
+  for (let i = 0; i < rows.length; i += 100) { const { error } = await sb.from('csh_registros').upsert(rows.slice(i, i + 100)); if (error) { toast('Error al guardar: ' + error.message); break; } }
+  if (rows.length) { await loadAll(); render(); }
+  return res;
 }

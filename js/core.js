@@ -66,6 +66,41 @@ const esColaborador = c => (c.roles || []).includes('Colaborador');
 const intentLabel = c => c.intent ? intentOf(c.intent).l : esColaborador(c) ? 'Colaborador' : '—';
 function aportados(cid) { return list('inmueble').filter(p => p.colaboradorId === cid).sort((a, b) => (a.ref || '').localeCompare(b.ref || '')); }
 function colaboradores() { return list('contacto').filter(c => esColaborador(c) || ['Agencia', 'Intermediario'].some(r => (c.roles || []).includes(r))).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')); }
+const titleCase = w => (w || '').toLowerCase().replace(/(^|[\s(\-·/])(\p{L})/gu, (a, b, c) => b + c.toUpperCase()).replace(/\b(De|Del|La|Las|Los|Y|En|El)\b/g, m => m.toLowerCase()).replace(/^./, m => m.toUpperCase());
+function mapTipo(t) {
+  t = norm(t).toUpperCase().replace(/\bALQUILER\b/, '').trim();
+  const m = [[/^(BAJO|PISO|VIVIENDA|HABITACION)/, 'Piso'], [/^ATICO/, 'Ático'], [/^DUPLEX/, 'Dúplex'], [/(CHALET|UNIFAMILIAR|^CASA)/, 'Casa / Chalet'], [/(ESTUDIO|LOFT)/, 'Estudio / Loft'], [/LOCAL/, 'Local'], [/OFICINA/, 'Oficina'], [/NAVE/, 'Nave'], [/(SOLAR|SUELO)/, 'Suelo / Solar'], [/GARAJE/, 'Garaje'], [/HOTEL/, 'Hotel'], [/EDIFICIO/, 'Edificio'], [/FINCA/, 'Finca rústica']];
+  for (const [re, v] of m) if (re.test(t)) return v; return '';
+}
+function parseFicha(txt) {
+  const r = {}; if (!txt) return r;
+  const g = re => (txt.match(re) || [])[1]?.trim();
+  r.titulo = g(/^#\s*(.+)$/m); r.telefono = (g(/\*\*Teléfono:\*\*\s*(.+)$/m) || '').replace(/ver en el grupo/i, '');
+  r.operacion = g(/\*\*Operación:\*\*\s*(\w+)/); r.origen = g(/\*\*Origen:\*\*\s*(.+)$/m); r.fecha = (g(/\*\*Fecha publicación:\*\*\s*(\d{4}-\d{2}-\d{2})/) || '');
+  const pr = g(/\*\*Precio detectado:\*\*\s*([\d.]+)\s*€/); r.precio = pr ? num(pr) : null;
+  const mm = g(/\*\*m²:\*\*\s*([\d.,]+)/); r.m2 = mm ? Number(mm.replace(',', '.')) : null;
+  const hb = g(/\*\*Hab\.:\*\*\s*(\d+)/); r.hab = hb ? +hb : null;
+  r.mensaje = (txt.split('## Mensaje original')[1] || '').replace(/\*\*/g, '').trim().slice(0, 3000);
+  return r;
+}
+const ZONAS_MULTI = ['NUEVA ESPAÑA', 'ARTURO SORIA', 'CIUDAD LINEAL', 'NUEVOS MINISTERIOS', 'EL VISO', 'CONDE ORGAZ', 'LAS ROZAS', 'SS REYES', 'CRUZ DEL RAYO', 'SAN BLAS', 'LA FINCA', 'RIOS ROSAS', 'PINTOR ROSALES', 'ZONA NORTE', 'VALLE DEL TIETAR', 'DENTRO M30', 'ALCALA DE HENARES', 'FUENTE DEL BERRO', 'MADRID PRIME', 'CANTABRICO'];
+function zonasDe(z) {
+  let s = ' ' + norm(z).toUpperCase() + ' '; const out = [];
+  for (const m of ZONAS_MULTI) { const k = ' ' + norm(m).toUpperCase() + ' '; if (s.includes(k)) { out.push(m); s = s.replace(k, ' '); } }
+  s.split(/\s+/).filter(w => w && !['Y', 'DE', 'DEL', 'LA', 'EL', 'NORTE', 'PRIME', 'PERIFERIA', 'CAPITALES'].includes(w)).forEach(w => out.push(w));
+  return out.map(titleCase).join(', ');
+}
+function parseDM(name, ficha) {
+  const m = name.match(/^DM\s*-?\s*(\d+)/i); if (!m) return null; const ref = 'DM-' + m[1].padStart(4, '0');
+  const segs = name.slice(m[0].length).split(/\s+-\s+/).map(x => x.trim()).filter(Boolean);
+  const nombre = segs.length > 1 && /[a-záéíóúñ]/.test(segs[segs.length - 1]) ? segs.pop() : '';
+  const [op = '', tipo = '', ...zz] = segs; const zona = zz.join(' ');
+  const fi = parseFicha(ficha);
+  const T = norm(tipo).toUpperCase();
+  const intent = /ALQUILER/.test(op) && !/COMPRA/.test(op) ? 'alquilar' : (/INVERSION|FLIP|HOTEL|SUELO|EDIFICIO/.test(T) ? 'invertir' : 'comprar');
+  const tp = mapTipo(tipo); const tipos = /SUELOS Y EDIFICIOS/.test(T) ? ['Suelo / Solar', 'Edificio'] : /PISO O CHALET/.test(T) ? ['Piso', 'Casa / Chalet'] : /ATICO O PISO/.test(T) ? ['Ático', 'Piso'] : tp ? [tp] : [];
+  return { ref, contacto: { nombre: nombre || ref, telefono: fi.telefono || '', intent, tipos, zonas: zonasDe(zona), precioMax: fi.precio, m2Min: fi.m2, habMin: fi.hab, estado: 'Nuevo', temperatura: 'Templado', origen: 'WhatsApp', agente: S.me?.nombre || '', fechaAlta: fi.fecha || today(), roles: [intent === 'alquilar' ? 'Inquilino' : intent === 'invertir' ? 'Inversor' : 'Comprador'], extras: [], adjuntos: [], dmRef: ref, carpeta: 'NUESTROS CAPTACION\\' + name, notas: (fi.origen ? 'Origen: ' + fi.origen + '\n\n' : '') + (fi.mensaje || ''), proximaAccion: 'Contactar y cualificar', proximaFecha: '' } };
+}
 /* Regla de carpetas NUESTROS CAPTACION: si el último tramo del nombre lleva minúsculas es el colaborador; si no, captación propia */
 function parseCarpeta(name) {
   const m = name.match(/^PV\s*-?\s*(\d+)/i); if (!m) return null;
