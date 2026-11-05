@@ -65,7 +65,7 @@ function renderChrome() {
     `<button data-more="1" class="${TAB_MAIN.includes(S.view) ? '' : 'on'}">${ic('more')}<span>Más</span></button>`;
   $('#mobBell').innerHTML = ic('bell') + (n.avisos ? `<span class="badge hot">${n.avisos}</span>` : '');
   const me = S.me || {};
-  $('#sideUser').innerHTML = `<div class="av" style="background:${me.color || '#3f6efc'}">${esc(me.iniciales || 'U')}</div><div class="who"><b>${esc(me.nombre || S.user?.email || '')}</b><span>${esc(me.rol || '')}</span></div><button class="btn icon ghost" style="color:#8a97ab" data-logout title="Salir">${ic('logout')}</button>`;
+  $('#sideUser').innerHTML = `<div class="av" style="background:${me.color || '#ff7440'}">${esc(me.iniciales || 'U')}</div><div class="who"><b>${esc(me.nombre || S.user?.email || '')}</b><span>${esc(me.rol || '')}</span></div><button class="btn icon ghost" style="color:#8a97ab" data-logout title="Salir">${ic('logout')}</button>`;
   setSync(S.sync);
 }
 function go(v) { S.view = v; closeMore(); window.scrollTo(0, 0); render(); try { history.replaceState(null, '', '?go=' + v); } catch (e) { } }
@@ -121,14 +121,14 @@ function vDashboard(el) {
     <div class="hero-act"><button class="btn" onclick="go('avisos')">${ic('bell')} Ver avisos</button><button class="btn pri" onclick="openContacto(null)">${ic('plus')} Captación</button></div>
   </div>
   <div class="grid g4" style="margin-bottom:16px">
-    ${kpi('blue', 'Contactos CRM', 'users', cs.filter(c => c.estado !== 'Perdido').length, cs.filter(c => c.estado === 'Nuevo').length + ' nuevos en captación', 'clientes')}
-    ${kpi('purple', 'Operaciones en curso', 'pipe', enCurso.length, eur(enCurso.reduce((a, o) => a + honor(o), 0), true) + ' honorarios previstos', 'pipeline')}
-    ${kpi('green', 'Cierres del mes', 'okc', cerradasMes.length, eur(cerradasMes.reduce((a, o) => a + honor(o), 0)) + ' cobrados', 'pipeline')}
-    ${kpi('red', 'Operaciones caídas', 'alert', caidas.length, eur(caidas.reduce((a, o) => a + honor(o), 0)) + ' perdidos', 'pipeline')}
-    ${kpi('orange', 'Cruces nuevos', 'magnet', nuevos.length, (S._matches || []).length + ' cruces activos', 'avisos')}
-    ${kpi('teal', 'Visitas 7 días', 'eye', visSem.length, vs.filter(v => v.estado === 'Realizada').length + ' realizadas en total', 'visitas')}
-    ${kpi('amber', 'Tasa de conversión', 'trend', conv + '%', cerradas.length + ' cerradas · ' + caidas.length + ' caídas', 'pipeline')}
-    ${kpi('pink', 'Honorario medio', 'euro', cerradas.length ? eur(cerradas.reduce((a, o) => a + honor(o), 0) / cerradas.length) : '—', activos.length + ' inmuebles activos', 'inmuebles')}
+    ${kpi('solid', 'Contactos CRM', 'users', cs.filter(c => c.estado !== 'Perdido').length, cs.filter(c => c.estado === 'Nuevo').length + ' nuevos en captación', 'clientes')}
+    ${kpi('dark', 'Operaciones en curso', 'pipe', enCurso.length, eur(enCurso.reduce((a, o) => a + honor(o), 0), true) + ' honorarios previstos', 'pipeline')}
+    ${kpi('hot', 'Cierres del mes', 'okc', cerradasMes.length, eur(cerradasMes.reduce((a, o) => a + honor(o), 0)) + ' cobrados', 'pipeline')}
+    ${kpi('dark', 'Operaciones caídas', 'alert', caidas.length, eur(caidas.reduce((a, o) => a + honor(o), 0)) + ' perdidos', 'pipeline')}
+    ${kpi('hot', 'Cruces nuevos', 'magnet', nuevos.length, (S._matches || []).length + ' cruces activos', 'avisos')}
+    ${kpi('dark', 'Visitas 7 días', 'eye', visSem.length, vs.filter(v => v.estado === 'Realizada').length + ' realizadas en total', 'visitas')}
+    ${kpi('orange', 'Tasa de conversión', 'trend', conv + '%', cerradas.length + ' cerradas · ' + caidas.length + ' caídas', 'pipeline')}
+    ${kpi('solid', 'Honorario medio', 'euro', cerradas.length ? eur(cerradas.reduce((a, o) => a + honor(o), 0) / cerradas.length) : '—', activos.length + ' inmuebles activos', 'inmuebles')}
   </div>
   <div class="grid g2" style="margin-bottom:16px">
     <div class="card"><div class="card-h"><h2>Embudo de captación</h2><button class="btn sm ghost" onclick="go('captacion')">Ver</button></div>
@@ -153,10 +153,10 @@ function donut(arr) {
   const tot = arr.reduce((a, x) => a + x[1], 0); if (!tot) return '<div class="empty">Sin contactos todavía</div>';
   let acc = 0; const R = 42, Cc = 2 * Math.PI * R;
   const segs = arr.map(([k, v], i) => { const l = v / tot * Cc; const s = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${C.palette[i % 12]}" stroke-width="18" stroke-dasharray="${l} ${Cc - l}" stroke-dashoffset="${-acc}" transform="rotate(-90 60 60)"/>`; acc += l; return s; }).join('');
-  return `<div class="donut-wrap"><svg width="120" height="120" viewBox="0 0 120 120">${segs}<text x="60" y="58" text-anchor="middle" font-family="Unbounded" font-size="20" font-weight="600" fill="#111827">${tot}</text><text x="60" y="76" text-anchor="middle" font-size="10" fill="#6b7280">contactos</text></svg><div class="legend">${arr.slice(0, 7).map(([k, v], i) => `<span><i style="background:${C.palette[i % 12]}"></i>${esc(k)} · <b>${v}</b></span>`).join('')}</div></div>`;
+  return `<div class="donut-wrap"><svg width="120" height="120" viewBox="0 0 120 120">${segs}<text x="60" y="58" text-anchor="middle" font-family="Unbounded" font-size="20" font-weight="500" fill="#111827">${tot}</text><text x="60" y="76" text-anchor="middle" font-size="10" fill="#6b7280">contactos</text></svg><div class="legend">${arr.slice(0, 7).map(([k, v], i) => `<span><i style="background:${C.palette[i % 12]}"></i>${esc(k)} · <b>${v}</b></span>`).join('')}</div></div>`;
 }
 function teamRows() {
-  return S.equipo.map(m => { const st = memberStats(m.nombre); return `<div class="today-item"><div class="av" style="background:${m.color}">${esc(m.iniciales)}</div><div style="flex:1"><b style="color:var(--ink)">${esc(m.nombre)}</b><div class="small muted">${st.cap} captaciones · ${st.vis} visitas · ${st.ops} operaciones</div></div><span class="num" style="color:var(--green)">${eur(st.hon, true)}</span></div>`; }).join('');
+  return S.equipo.map(m => { const st = memberStats(m.nombre); return `<div class="today-item"><div class="av" style="background:${m.color}">${esc(m.iniciales)}</div><div style="flex:1"><b style="color:var(--ink)">${esc(m.nombre)}</b><div class="small muted">${st.cap} captaciones · ${st.vis} visitas · ${st.ops} operaciones</div></div><span class="num" style="color:var(--orange)">${eur(st.hon, true)}</span></div>`; }).join('');
 }
 function memberStats(nombre) {
   const honor = o => num(o.honorarios) ?? ((num(o.importe) || 0) * (num(o.honorariosPct) || 0) / 100);
@@ -166,12 +166,12 @@ function memberStats(nombre) {
 /* ---------- AGENDA helpers ---------- */
 function agendaItems(days) {
   const t = today(), end = new Date(Date.now() + days * 864e5).toISOString().slice(0, 10); const out = [];
-  list('visita').forEach(v => { const d = (v.fecha || '').slice(0, 10); if (v.estado === 'Programada' && d >= t && d <= end) out.push({ d: v.fecha, k: 'Visita', c: '#8b5cf6', t: (v.cliente || 'Visita') + ' · ' + (get(v.inmuebleId)?.ref || ''), open: `openVisita('${v.id}')` }); });
-  list('tarea').forEach(x => { if (!x.hecha && x.fecha && x.fecha <= end) out.push({ d: x.fecha + (x.hora ? 'T' + x.hora : ''), k: x.fecha < t ? 'Vencida' : 'Tarea', c: x.fecha < t ? '#ef4444' : '#3f6efc', t: x.titulo, open: `openTarea('${x.id}')` }); });
-  list('contacto').forEach(c => { if (c.proximaFecha && c.proximaFecha <= end && !['Perdido', 'Cliente'].includes(c.estado)) out.push({ d: c.proximaFecha, k: c.proximaFecha < t ? 'Vencido' : 'Seguimiento', c: c.proximaFecha < t ? '#ef4444' : '#ff7440', t: (c.proximaAccion || 'Seguimiento') + ' · ' + (c.nombre || ''), open: `openContacto('${c.id}')` }); });
+  list('visita').forEach(v => { const d = (v.fecha || '').slice(0, 10); if (v.estado === 'Programada' && d >= t && d <= end) out.push({ d: v.fecha, k: 'Visita', c: '#212934', t: (v.cliente || 'Visita') + ' · ' + (get(v.inmuebleId)?.ref || ''), open: `openVisita('${v.id}')` }); });
+  list('tarea').forEach(x => { if (!x.hecha && x.fecha && x.fecha <= end) out.push({ d: x.fecha + (x.hora ? 'T' + x.hora : ''), k: x.fecha < t ? 'Vencida' : 'Tarea', c: x.fecha < t ? '#e2582a' : '#444444', t: x.titulo, open: `openTarea('${x.id}')` }); });
+  list('contacto').forEach(c => { if (c.proximaFecha && c.proximaFecha <= end && !['Perdido', 'Cliente'].includes(c.estado)) out.push({ d: c.proximaFecha, k: c.proximaFecha < t ? 'Vencido' : 'Seguimiento', c: c.proximaFecha < t ? '#e2582a' : '#ff7440', t: (c.proximaAccion || 'Seguimiento') + ' · ' + (c.nombre || ''), open: `openContacto('${c.id}')` }); });
   return out.sort((a, b) => (a.d || '').localeCompare(b.d || ''));
 }
-const agendaRow = a => `<div class="today-item" style="cursor:pointer" onclick="${a.open}"><span class="tm">${a.d && a.d.length > 10 ? ftime(a.d) : fdate(a.d)}</span><span class="chip" style="background:${a.c}1a;color:${a.c}">${a.k}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600">${esc(a.t)}</span></div>`;
+const agendaRow = a => `<div class="today-item" style="cursor:pointer" onclick="${a.open}"><span class="tm">${a.d && a.d.length > 10 ? ftime(a.d) : fdate(a.d)}</span><span class="chip" style="background:${a.c}1a;color:${a.c}">${a.k}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:500">${esc(a.t)}</span></div>`;
 
 /* ---------- AVISOS ---------- */
 function vAvisos(el) {
@@ -181,10 +181,10 @@ function vAvisos(el) {
   actions(`<button class="btn" onclick="render()">${ic('trend')} Recalcular cruces</button>`);
   el.innerHTML = `
   <div class="grid g4" style="margin-bottom:14px">
-    <div class="kpi c-orange" onclick="S.ui.avf='nuevo';render()"><div class="lbl">Cruces nuevos<span class="ico">${ic('magnet')}</span></div><div class="val">${ms.filter(m => m.estado === 'nuevo').length}</div><div class="ft">Demanda ↔ cartera</div></div>
-    <div class="kpi c-blue" onclick="S.ui.avf='contactado';render()"><div class="lbl">Trabajados<span class="ico">${ic('send')}</span></div><div class="val">${ms.filter(m => m.estado === 'contactado').length}</div><div class="ft">Ya ofrecidos al cliente</div></div>
-    <div class="kpi c-red"><div class="lbl">Urgentes<span class="ico">${ic('alert')}</span></div><div class="val">${sys.filter(a => a.lvl === 'bad').length}</div><div class="ft">Vencidos y caducados</div></div>
-    <div class="kpi c-amber"><div class="lbl">Atención<span class="ico">${ic('clock')}</span></div><div class="val">${sys.filter(a => a.lvl !== 'bad').length}</div><div class="ft">Hoy, fríos y documentación</div></div>
+    <div class="kpi c-hot" onclick="S.ui.avf='nuevo';render()"><div class="lbl">Cruces nuevos<span class="ico">${ic('magnet')}</span></div><div class="val">${ms.filter(m => m.estado === 'nuevo').length}</div><div class="ft">Demanda ↔ cartera</div></div>
+    <div class="kpi c-solid" onclick="S.ui.avf='contactado';render()"><div class="lbl">Trabajados<span class="ico">${ic('send')}</span></div><div class="val">${ms.filter(m => m.estado === 'contactado').length}</div><div class="ft">Ya ofrecidos al cliente</div></div>
+    <div class="kpi c-orange"><div class="lbl">Urgentes<span class="ico">${ic('alert')}</span></div><div class="val">${sys.filter(a => a.lvl === 'bad').length}</div><div class="ft">Vencidos y caducados</div></div>
+    <div class="kpi c-dark"><div class="lbl">Atención<span class="ico">${ic('clock')}</span></div><div class="val">${sys.filter(a => a.lvl !== 'bad').length}</div><div class="ft">Hoy, fríos y documentación</div></div>
   </div>
   <div class="grid g2">
     <div>
@@ -252,7 +252,7 @@ function contactTable(rows) {
   rows = rows.sort((a, b) => (b._u || '').localeCompare(a._u || ''));
   if (!rows.length) return `<div class="card empty">${ic('users')}Sin contactos. Pulsa <b>Nueva captación</b>.</div>`;
   return `<div class="card"><div class="tbl-wrap resp"><table class="tbl"><thead><tr><th>Contacto</th><th>Intención</th><th>Busca / ofrece</th><th>Estado</th><th>Score</th><th>Cruces</th><th>Próxima acción</th><th>Agente</th></tr></thead><tbody>
-  ${rows.map(c => `<tr class="click" onclick="openContacto('${c.id}')"><td><b style="color:var(--ink)">${esc(c.nombre)}</b><div class="small muted">${esc(c.telefono || c.email || '')}</div></td><td><span class="chip ${isOferta(c) ? 'p' : 'b'}">${esc(intentOf(c.intent).l)}</span></td><td class="small">${esc(resumenBusca(c))}</td><td><span class="chip" style="background:${C.leadColor[c.estado] || '#94a3b8'}22;color:${C.leadColor[c.estado] || '#64748b'}">${esc(c.estado || '—')}</span></td><td><b style="color:${scoreColor(leadScore(c))}">${leadScore(c)}</b></td><td>${matchesFor(c.id).length ? `<span class="chip o">${matchesFor(c.id).length}</span>` : '—'}</td><td class="small ${c.proximaFecha && c.proximaFecha < today() ? '' : 'muted'}" style="${c.proximaFecha && c.proximaFecha < today() ? 'color:var(--red);font-weight:700' : ''}">${esc(c.proximaAccion || '')} ${c.proximaFecha ? fdate(c.proximaFecha) : ''}</td><td>${esc(initials(c.agente))}</td></tr>`).join('')}</tbody></table></div>
+  ${rows.map(c => `<tr class="click" onclick="openContacto('${c.id}')"><td><b style="color:var(--ink)">${esc(c.nombre)}</b><div class="small muted">${esc(c.telefono || c.email || '')}</div></td><td><span class="chip ${isOferta(c) ? 'p' : 'b'}">${esc(intentOf(c.intent).l)}</span></td><td class="small">${esc(resumenBusca(c))}</td><td><span class="chip" style="background:${C.leadColor[c.estado] || '#94a3b8'}22;color:${C.leadColor[c.estado] || '#64748b'}">${esc(c.estado || '—')}</span></td><td><b style="color:${scoreColor(leadScore(c))}">${leadScore(c)}</b></td><td>${matchesFor(c.id).length ? `<span class="chip o">${matchesFor(c.id).length}</span>` : '—'}</td><td class="small ${c.proximaFecha && c.proximaFecha < today() ? '' : 'muted'}" style="${c.proximaFecha && c.proximaFecha < today() ? 'color:var(--red);font-weight:500' : ''}">${esc(c.proximaAccion || '')} ${c.proximaFecha ? fdate(c.proximaFecha) : ''}</td><td>${esc(initials(c.agente))}</td></tr>`).join('')}</tbody></table></div>
   <div class="lcards">${rows.map(c => `<div class="lcard" onclick="openContacto('${c.id}')"><div class="ic" style="background:${isOferta(c) ? 'var(--purple-soft)' : 'var(--blue-soft)'};color:${isOferta(c) ? 'var(--purple)' : 'var(--blue)'}">${ic(intentOf(c.intent).ic || 'user')}</div><div class="bd"><div class="t">${esc(c.nombre)}</div><div class="s">${esc(intentOf(c.intent).l)} · ${esc(resumenBusca(c))}</div><div class="chips"><span class="chip" style="background:${C.leadColor[c.estado] || '#94a3b8'}22;color:${C.leadColor[c.estado] || '#64748b'}">${esc(c.estado)}</span>${matchesFor(c.id).length ? `<span class="chip o">${matchesFor(c.id).length} cruces</span>` : ''}${c.proximaFecha ? `<span class="chip ${c.proximaFecha < today() ? 'r' : 'n'}">${fdate(c.proximaFecha)}</span>` : ''}</div></div><div class="rt"><b style="color:${scoreColor(leadScore(c))}" class="num">${leadScore(c)}</b></div></div>`).join('')}</div></div>`;
 }
 
@@ -321,7 +321,7 @@ async function toggleTarea(id, v) { const t = get(id); t.hecha = v; await save('
 function vEquipo(el) {
   el.innerHTML = `<div class="grid g2">${S.equipo.map(m => { const st = memberStats(m.nombre); return `<div class="card pad" style="background:linear-gradient(160deg,#fff 50%,${m.color}14)">
     <div style="display:flex;gap:14px;align-items:center"><div class="av lg" style="background:linear-gradient(135deg,${m.color},${m.color}bb)">${esc(m.iniciales)}</div><div style="flex:1"><h2>${esc(m.nombre)}</h2><div class="muted small">${esc(m.rol || '')}</div><div class="small" style="margin-top:4px">${m.email ? `<span class="chip g">${ic('okc').replace('<svg', '<svg width="12" height="12"')} Acceso activo · ${esc(m.email)}</span>` : '<span class="chip a">Pendiente de email de acceso</span>'}</div></div></div>
-    <div class="grid g4" style="margin-top:16px;gap:8px">${[['Captaciones', st.cap, 'orange'], ['Inmuebles', st.inm, 'blue'], ['Visitas', st.vis, 'purple'], ['Honorarios', eur(st.hon, true), 'green']].map(([l, v, c]) => `<div style="background:var(--${c}-soft);border-radius:14px;padding:10px"><div class="num" style="font-size:18px;color:var(--${c === 'orange' ? 'orange' : c})">${v}</div><div class="small muted">${l}</div></div>`).join('')}</div>
+    <div class="grid g4" style="margin-top:16px;gap:8px">${[['Captaciones', st.cap, 1], ['Inmuebles', st.inm, 0], ['Visitas', st.vis, 0], ['Honorarios', eur(st.hon, true), 1]].map(([l, v, o]) => `<div style="background:${o ? '#fff1ea' : '#efefef'};border-radius:14px;padding:10px"><div class="num" style="font-size:17px;color:${o ? '#ff7440' : '#212934'}">${v}</div><div class="small muted">${l}</div></div>`).join('')}</div>
     <div class="fg" style="margin-top:14px"><div class="fld"><label>Email de acceso</label><input id="eqm_${m.id}" type="email" value="${esc(m.email || '')}" placeholder="email@…"></div><div class="fld"><label>Teléfono</label><input id="eqt_${m.id}" value="${esc(m.telefono || '')}"></div></div>
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm blue" onclick="saveMember('${m.id}')">Guardar</button>${m.telefono ? `<a class="btn sm" href="tel:${esc(m.telefono)}">${ic('phone')} Llamar</a>` : ''}</div></div>`; }).join('')}</div>
   <div class="card pad" style="margin-top:16px"><h3 style="margin-bottom:6px">Cómo entra Jesús Romero</h3><p class="small muted" style="margin:0">1) Escribe aquí su email y guarda. 2) Él abre la app, pulsa <b>Crear acceso</b> con ese email y elige su contraseña. 3) Instala la app desde el menú del navegador → <b>Añadir a pantalla de inicio</b>. Solo los emails de este equipo pueden ver los datos.</p></div>`;

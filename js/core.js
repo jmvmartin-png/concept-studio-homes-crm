@@ -41,7 +41,7 @@ const C = {
     { k: 'vender', l: 'Vender', ic: 'tag', side: 'oferta' },
     { k: 'arrendar', l: 'Poner en alquiler', ic: 'building', side: 'oferta' }],
   leadEstados: ['Nuevo', 'Contactado', 'Cualificado', 'Visitando', 'Negociación', 'Cliente', 'Perdido'],
-  leadColor: { Nuevo: '#ff7440', Contactado: '#f59e0b', Cualificado: '#3f6efc', Visitando: '#8b5cf6', 'Negociación': '#ec4899', Cliente: '#10b981', Perdido: '#94a3b8' },
+  leadColor: { Nuevo: '#ff7440', Contactado: '#ff9a6b', Cualificado: '#8a8f98', Visitando: '#5c6370', 'Negociación': '#444444', Cliente: '#212934', Perdido: '#b0b4ba' },
   origenes: ['Idealista', 'Fotocasa', 'Habitaclia', 'Web CSH', 'Instagram', 'LinkedIn', 'WhatsApp', 'Referido', 'Puerta fría', 'Colaborador', 'Llamada', 'Otro'],
   roles: ['Comprador', 'Inquilino', 'Inversor', 'Propietario', 'Colaborador', 'Agencia', 'Intermediario'],
   temps: ['Frío', 'Templado', 'Caliente'],
@@ -49,15 +49,15 @@ const C = {
   plazos: ['Inmediato', '< 3 meses', '3–6 meses', '6–12 meses', 'Sin prisa'],
   extras: ['Ascensor', 'Terraza', 'Garaje', 'Piscina', 'Exterior', 'Trastero', 'Aire acondicionado', 'Jardín', 'Reformado', 'Para reformar', 'Alquilado', 'Licencia'],
   opEstados: ['Propuesta', 'Oferta', 'Negociación', 'Arras', 'Notaría', 'Cerrada', 'Caída'],
-  opColor: { Propuesta: '#94a3b8', Oferta: '#f59e0b', 'Negociación': '#3f6efc', Arras: '#8b5cf6', 'Notaría': '#ec4899', Cerrada: '#10b981', 'Caída': '#ef4444' },
+  opColor: { Propuesta: '#9aa0a8', Oferta: '#6b717b', 'Negociación': '#444444', Arras: '#2c343f', 'Notaría': '#212934', Cerrada: '#ff7440', 'Caída': '#b0b4ba' },
   opProb: { Propuesta: 10, Oferta: 25, 'Negociación': 45, Arras: 75, 'Notaría': 90, Cerrada: 100, 'Caída': 0 },
-  inmColor: { 'Captación': '#ff7440', 'Documentación': '#f59e0b', 'Comercialización': '#3f6efc', 'Negociación': '#8b5cf6', 'Arras / Reserva': '#ec4899', Cerrado: '#10b981', Descartado: '#94a3b8' },
+  inmColor: { 'Captación': '#ff7440', 'Documentación': '#e2582a', 'Comercialización': '#212934', 'Negociación': '#444444', 'Arras / Reserva': '#6b717b', Cerrado: '#8a8f98', Descartado: '#b0b4ba' },
   visEstados: ['Programada', 'Realizada', 'Cancelada', 'No presentado'],
   intereses: ['Frío', 'Templado', 'Caliente'],
   portales: ['Idealista', 'Fotocasa', 'Habitaclia', 'Pisos.com', 'Web CSH'],
   docCats: ['Nota simple', 'Catastro', 'CEE', 'Ficha comercial', 'Planos', 'Fotos', 'Encargo / mandato', 'Contrato', 'Arras', 'Oferta firmada', 'Identificación', 'Factura', 'Parte de visita', 'Otro'],
   checklist: { nota: 'Nota simple', catastro: 'Catastro', cee: 'CEE', ficha: 'Ficha comercial', planos: 'Planos', fotos: 'Fotos', encargo: 'Encargo' },
-  palette: ['#3f6efc', '#ff7440', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#14b8a6', '#ef4444', '#64748b', '#0ea5e9', '#a855f7', '#84cc16']
+  palette: ['#ff7440', '#212934', '#8a8f98', '#ffa47a', '#444444', '#c9ccd1', '#e2582a', '#6b717b', '#ffc9b0', '#2c343f', '#b0b4ba', '#ff8a5c']
 };
 const intentOf = k => C.intents.find(i => i.k === k) || { l: k || '—', side: '' };
 const isDemanda = c => ['comprar', 'alquilar', 'invertir'].includes(c.intent);
@@ -204,7 +204,7 @@ function leadScore(c) {
   if (matchesFor(c.id).length) s += 5;
   return Math.min(100, s);
 }
-const scoreColor = s => s >= 70 ? '#10b981' : s >= 45 ? '#f59e0b' : '#ef4444';
+const scoreColor = s => s >= 70 ? '#ff7440' : s >= 45 ? '#444444' : '#9aa0a8';
 
 /* ---------- avisos del sistema ---------- */
 function systemAlerts() {
