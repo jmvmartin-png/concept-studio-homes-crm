@@ -68,7 +68,7 @@ function renderChrome() {
   $('#sideUser').innerHTML = `<div class="av" style="background:${me.color || '#ff7440'}">${esc(me.iniciales || 'U')}</div><div class="who"><b>${esc(me.nombre || S.user?.email || '')}</b><span>${esc(me.rol || '')}</span></div><button class="btn icon ghost" style="color:#8a97ab" data-logout title="Salir">${ic('logout')}</button>`;
   setSync(S.sync);
 }
-const FILTROS = ['capE', 'capA', 'capI', 'capQ', 'inE', 'inO', 'inT', 'inQ', 'clQ', 'clR', 'clO', 'viA', 'pipeFocus'];
+const FILTROS = ['capE', 'capA', 'capI', 'capQ', 'inE', 'inO', 'inT', 'inQ', 'inC', 'clQ', 'clR', 'clO', 'viA', 'pipeFocus'];
 function goF(v, f = {}) { FILTROS.forEach(k => delete S.ui[k]); Object.assign(S.ui, f); go(v); }
 function filtroChip(k, label) { return S.ui[k] ? `<span class="chip o clk" onclick="delete S.ui['${k}'];render()">${esc(label)}: ${esc(S.ui[k])} ✕</span>` : ''; }
 function go(v) { S.view = v; closeMore(); window.scrollTo(0, 0); render(); try { history.replaceState(null, '', '?go=' + v); } catch (e) { } }
@@ -251,7 +251,7 @@ async function markMatch(key, estado) {
 /* ---------- CAPTACIÓN ---------- */
 function vCaptacion(el) {
   const mode = S.ui.capMode || 'kanban'; const q = norm(S.ui.capQ || ''); const fi = S.ui.capI || '';
-  const all = list('contacto').filter(c => (!fi || c.intent === fi) && (!S.ui.capE || c.estado === S.ui.capE) && (!S.ui.capA || c.agente === S.ui.capA) && (!q || norm([c.nombre, c.telefono, c.email, c.zonas, c.oDireccion, c.notas].join(' ')).includes(q)));
+  const all = list('contacto').filter(c => (c.intent || !esColaborador(c)) && (!fi || c.intent === fi) && (!S.ui.capE || c.estado === S.ui.capE) && (!S.ui.capA || c.agente === S.ui.capA) && (!q || norm([c.nombre, c.telefono, c.email, c.zonas, c.oDireccion, c.notas].join(' ')).includes(q)));
   actions(`<button class="btn" onclick="openExtract()">${ic('wand')} Extraer de texto</button><button class="btn pri" onclick="openContacto(null)">${ic('plus')} Nueva captación</button>`);
   const intentBtns = `<div class="seg"><button class="${!fi ? 'on' : ''}" onclick="S.ui.capI='';render()">Todos</button>${C.intents.map(i => `<button class="${fi === i.k ? 'on' : ''}" onclick="S.ui.capI='${i.k}';render()">${i.l}</button>`).join('')}</div>`;
   el.innerHTML = `
@@ -260,12 +260,13 @@ function vCaptacion(el) {
   <button class="btn" onclick="openExtract()">${ic('wand')}<span class="btn-label"> Extraer</span></button></div>
   <div class="toolbar" style="overflow-x:auto;flex-wrap:nowrap">${intentBtns}</div>${S.ui.capE || S.ui.capA ? `<div class="toolbar">${filtroChip('capE', 'Estado')}${filtroChip('capA', 'Agente')}</div>` : ''}
   ${mode === 'kanban' ? kanban(C.leadEstados, C.leadColor, all, 'estado', c => `<div class="kcard" draggable="true" data-id="${c.id}" style="border-top-color:${scoreColor(leadScore(c))}" onclick="openContacto('${c.id}')">
-      <div class="t">${esc(c.nombre || 'Sin nombre')}</div><div class="s">${esc(intentOf(c.intent).l)} · ${esc(resumenBusca(c))}</div>
+      <div class="t">${esc(c.nombre || 'Sin nombre')}</div><div class="s">${esc(intentLabel(c))} · ${esc(resumenBusca(c))}</div>
       <div class="r"><span class="chip" style="background:${scoreColor(leadScore(c))}1f;color:${scoreColor(leadScore(c))}">★ ${leadScore(c)}</span>${matchesFor(c.id).length ? `<span class="chip o">${ic('magnet', '').replace('<svg', '<svg width="12" height="12"')} ${matchesFor(c.id).length}</span>` : ''}<span class="small muted">${esc(initials(c.agente))}</span></div></div>`, 'contacto')
       : contactTable(all)}`;
   bindKanban('contacto', 'estado');
 }
 function resumenBusca(c) {
+  if (!c.intent && esColaborador(c)) { const a = aportados(c.id); return 'Colaborador · ' + (a.length ? a.length + ' inmueble' + (a.length > 1 ? 's' : '') + ': ' + a.map(p => p.ref).join(', ') : 'sin inmuebles'); }
   if (isOferta(c)) return [c.oTipo, c.oZona || c.oMunicipio, c.oPrecio ? eur(num(c.oPrecio), true) : ''].filter(Boolean).join(' · ') || 'Datos del inmueble pendientes';
   return [(c.tipos || []).join('/'), c.zonas, c.precioMax ? '≤ ' + eur(num(c.precioMax), true) : ''].filter(Boolean).join(' · ') || 'Preferencias pendientes';
 }
@@ -274,8 +275,8 @@ function contactTable(rows) {
   rows = rows.sort((a, b) => (b._u || '').localeCompare(a._u || ''));
   if (!rows.length) return `<div class="card empty">${ic('users')}Sin contactos. Pulsa <b>Nueva captación</b>.</div>`;
   return `<div class="card"><div class="tbl-wrap resp"><table class="tbl"><thead><tr><th>Contacto</th><th>Intención</th><th>Busca / ofrece</th><th>Estado</th><th>Score</th><th>Cruces</th><th>Próxima acción</th><th>Agente</th></tr></thead><tbody>
-  ${rows.map(c => `<tr class="click" onclick="openContacto('${c.id}')"><td><b style="color:var(--ink)">${esc(c.nombre)}</b><div class="small muted">${esc(c.telefono || c.email || '')}</div></td><td><span class="chip ${isOferta(c) ? 'p' : 'b'}">${esc(intentOf(c.intent).l)}</span></td><td class="small">${esc(resumenBusca(c))}</td><td><span class="chip" style="background:${C.leadColor[c.estado] || '#94a3b8'}22;color:${C.leadColor[c.estado] || '#64748b'}">${esc(c.estado || '—')}</span></td><td><b style="color:${scoreColor(leadScore(c))}">${leadScore(c)}</b></td><td>${matchesFor(c.id).length ? `<span class="chip o">${matchesFor(c.id).length}</span>` : '—'}</td><td class="small ${c.proximaFecha && c.proximaFecha < today() ? '' : 'muted'}" style="${c.proximaFecha && c.proximaFecha < today() ? 'color:var(--red);font-weight:500' : ''}">${esc(c.proximaAccion || '')} ${c.proximaFecha ? fdate(c.proximaFecha) : ''}</td><td>${esc(initials(c.agente))}</td></tr>`).join('')}</tbody></table></div>
-  <div class="lcards">${rows.map(c => `<div class="lcard" onclick="openContacto('${c.id}')"><div class="ic" style="background:${isOferta(c) ? 'var(--purple-soft)' : 'var(--blue-soft)'};color:${isOferta(c) ? 'var(--purple)' : 'var(--blue)'}">${ic(intentOf(c.intent).ic || 'user')}</div><div class="bd"><div class="t">${esc(c.nombre)}</div><div class="s">${esc(intentOf(c.intent).l)} · ${esc(resumenBusca(c))}</div><div class="chips"><span class="chip" style="background:${C.leadColor[c.estado] || '#94a3b8'}22;color:${C.leadColor[c.estado] || '#64748b'}">${esc(c.estado)}</span>${matchesFor(c.id).length ? `<span class="chip o">${matchesFor(c.id).length} cruces</span>` : ''}${c.proximaFecha ? `<span class="chip ${c.proximaFecha < today() ? 'r' : 'n'}">${fdate(c.proximaFecha)}</span>` : ''}</div></div><div class="rt"><b style="color:${scoreColor(leadScore(c))}" class="num">${leadScore(c)}</b></div></div>`).join('')}</div></div>`;
+  ${rows.map(c => `<tr class="click" onclick="openContacto('${c.id}')"><td><b style="color:var(--ink)">${esc(c.nombre)}</b><div class="small muted">${esc(c.telefono || c.email || '')}</div></td><td><span class="chip ${isOferta(c) ? 'p' : 'b'}">${esc(intentLabel(c))}</span></td><td class="small">${esc(resumenBusca(c))}</td><td><span class="chip" style="background:${C.leadColor[c.estado] || '#94a3b8'}22;color:${C.leadColor[c.estado] || '#64748b'}">${esc(c.estado || '—')}</span></td><td><b style="color:${scoreColor(leadScore(c))}">${leadScore(c)}</b></td><td>${matchesFor(c.id).length ? `<span class="chip o">${matchesFor(c.id).length}</span>` : '—'}</td><td class="small ${c.proximaFecha && c.proximaFecha < today() ? '' : 'muted'}" style="${c.proximaFecha && c.proximaFecha < today() ? 'color:var(--red);font-weight:500' : ''}">${esc(c.proximaAccion || '')} ${c.proximaFecha ? fdate(c.proximaFecha) : ''}</td><td>${esc(initials(c.agente))}</td></tr>`).join('')}</tbody></table></div>
+  <div class="lcards">${rows.map(c => `<div class="lcard" onclick="openContacto('${c.id}')"><div class="ic" style="background:${isOferta(c) ? 'var(--purple-soft)' : 'var(--blue-soft)'};color:${isOferta(c) ? 'var(--purple)' : 'var(--blue)'}">${ic(intentOf(c.intent).ic || 'user')}</div><div class="bd"><div class="t">${esc(c.nombre)}</div><div class="s">${esc(intentLabel(c))} · ${esc(resumenBusca(c))}</div><div class="chips"><span class="chip" style="background:${C.leadColor[c.estado] || '#94a3b8'}22;color:${C.leadColor[c.estado] || '#64748b'}">${esc(c.estado)}</span>${matchesFor(c.id).length ? `<span class="chip o">${matchesFor(c.id).length} cruces</span>` : ''}${c.proximaFecha ? `<span class="chip ${c.proximaFecha < today() ? 'r' : 'n'}">${fdate(c.proximaFecha)}</span>` : ''}</div></div><div class="rt"><b style="color:${scoreColor(leadScore(c))}" class="num">${leadScore(c)}</b></div></div>`).join('')}</div></div>`;
 }
 
 /* ---------- KANBAN genérico ---------- */
@@ -293,17 +294,21 @@ function bindKanban(tipo, field) {
 
 /* ---------- INMUEBLES ---------- */
 function vInmuebles(el) {
-  const q = norm(S.ui.inQ || ''), fe = S.ui.inE || '', fo = S.ui.inO || '', ft = S.ui.inT || '';
-  const rows = list('inmueble').filter(p => (!fe || p.estado === fe) && (!fo || p.operacion === fo) && (!ft || p.tipo === ft) && (!q || norm([p.ref, p.direccion, p.zona, p.municipio, p.contacto, p.notas].join(' ')).includes(q))).sort((a, b) => (b.ref || '').localeCompare(a.ref || ''));
+  const q = norm(S.ui.inQ || ''), fe = S.ui.inE || '', fo = S.ui.inO || '', ft = S.ui.inT || '', fc = S.ui.inC || '';
+  const rows = list('inmueble').filter(p => (!fc || (fc === 'Propia' ? p.captacion !== 'Colaborador' : fc === 'Colaborador' ? p.captacion === 'Colaborador' : p.colaboradorId === fc)) && (!fe || p.estado === fe) && (!fo || p.operacion === fo) && (!ft || p.tipo === ft) && (!q || norm([p.ref, p.direccion, p.zona, p.municipio, p.contacto, p.notas].join(' ')).includes(q))).sort((a, b) => (b.ref || '').localeCompare(a.ref || ''));
   actions(`<button class="btn" onclick="exportTipo('inmueble')">${ic('dl')} CSV</button><button class="btn pri" onclick="openInmueble(null)">${ic('plus')} Nuevo inmueble</button>`);
   const sel = (k, opts, lab) => `<select class="f" onchange="S.ui.${k}=this.value;render()"><option value="">${lab}</option>${opts.map(o => `<option ${S.ui[k] === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
   const pubN = p => C.portales.filter(x => (p.portales || {})[x]?.on).length;
-  el.innerHTML = `<div class="toolbar"><div class="search">${ic('search')}<input placeholder="Ref., dirección, zona, contacto…" value="${esc(S.ui.inQ || '')}" oninput="S.ui.inQ=this.value;clearTimeout(S._t);S._t=setTimeout(()=>{render();const i=$('.search input');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>${sel('inE', C.estadosInm, 'Estado')}${sel('inO', C.operaciones, 'Operación')}${sel('inT', C.tipos, 'Tipo')}</div>
-  <div class="card">${rows.length ? `<div class="tbl-wrap resp"><table class="tbl"><thead><tr><th>Ref.</th><th>Inmueble</th><th>Operación</th><th>m²</th><th>Precio</th><th>€/m²</th><th>Estado</th><th>Portales</th><th>Docs</th><th>Cruces</th></tr></thead><tbody>
-  ${rows.map(p => `<tr class="click" onclick="openInmueble('${p.id}')"><td class="ref">${esc(p.ref)}</td><td><b style="color:var(--ink)">${esc(p.tipo)}</b> · ${esc(p.direccion)}<div class="small muted">${esc([p.zona, p.municipio].filter(Boolean).join(' · '))}</div></td><td><span class="chip ${p.operacion === 'Venta' ? 'b' : 'p'}">${esc(p.operacion)}</span></td><td class="nowrap">${m2(p.m2c)}</td><td class="nowrap"><b>${eur(p.precio)}</b></td><td class="nowrap small">${p.precio && p.m2c ? eur(p.precio / p.m2c) : '—'}</td><td><span class="chip" style="background:${C.inmColor[p.estado]}22;color:${C.inmColor[p.estado]}">${esc(p.estado)}</span></td><td>${pubN(p) ? `<span class="chip g">Publicado · ${pubN(p)}</span>` : '<span class="chip n">No publicado</span>'}</td><td>${(p.adjuntos || []).length + (p.nDocs || 0)}</td><td>${matchesFor(p.id).length ? `<span class="chip o">${matchesFor(p.id).length}</span>` : '—'}</td></tr>`).join('')}</tbody></table></div>
-  <div class="lcards">${rows.map(p => `<div class="lcard" onclick="openInmueble('${p.id}')"><div class="ic" style="background:${C.inmColor[p.estado]}1f;color:${C.inmColor[p.estado]}">${ic(['Local', 'Oficina', 'Edificio', 'Nave', 'Hotel'].includes(p.tipo) ? 'building' : 'home')}</div><div class="bd"><div class="t"><span class="ref">${esc(p.ref)}</span> · ${esc(p.tipo)}</div><div class="s">${esc(p.direccion)}${p.zona ? ' · ' + esc(p.zona) : ''}</div><div class="chips"><span class="chip" style="background:${C.inmColor[p.estado]}22;color:${C.inmColor[p.estado]}">${esc(p.estado)}</span><span class="chip n">${m2(p.m2c)}</span>${pubN(p) ? '<span class="chip g">Publicado</span>' : ''}${matchesFor(p.id).length ? `<span class="chip o">${matchesFor(p.id).length} cruces</span>` : ''}</div></div><div class="rt"><b class="num" style="font-size:13px">${eur(p.precio, true)}</b><div class="small muted">${esc(p.operacion)}</div></div></div>`).join('')}</div>` : `<div class="empty">${ic('home')}Sin inmuebles con esos filtros</div>`}</div>`;
+  el.innerHTML = `<div class="toolbar"><div class="search">${ic('search')}<input placeholder="Ref., dirección, zona, contacto…" value="${esc(S.ui.inQ || '')}" oninput="S.ui.inQ=this.value;clearTimeout(S._t);S._t=setTimeout(()=>{render();const i=$('.search input');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>${sel('inE', C.estadosInm, 'Estado')}${sel('inO', C.operaciones, 'Operación')}${sel('inT', C.tipos, 'Tipo')}<select class="f" onchange="S.ui.inC=this.value;render()"><option value="">Captación</option><option value="Propia" ${fc === 'Propia' ? 'selected' : ''}>Propia</option><option value="Colaborador" ${fc === 'Colaborador' ? 'selected' : ''}>De colaborador</option>${colaboradores().filter(c => aportados(c.id).length).map(c => `<option value="${c.id}" ${fc === c.id ? 'selected' : ''}>· ${esc(c.nombre)}</option>`).join('')}</select></div>
+  <div class="card">${rows.length ? `<div class="tbl-wrap resp"><table class="tbl"><thead><tr><th>Ref.</th><th>Captación</th><th>Inmueble</th><th>Operación</th><th>m²</th><th>Precio</th><th>€/m²</th><th>Estado</th><th>Portales</th><th>Docs</th><th>Cruces</th></tr></thead><tbody>
+  ${rows.map(p => `<tr class="click" onclick="openInmueble('${p.id}')"><td class="ref">${esc(p.ref)}</td><td>${capChip(p)}</td><td style="min-width:260px"><b style="color:var(--ink)">${esc(p.tipo)}</b> · ${esc(p.direccion)}<div class="small muted">${esc([p.zona, p.municipio].filter(Boolean).join(' · '))}</div></td><td><span class="chip ${p.operacion === 'Venta' ? 'b' : 'p'}">${esc(p.operacion)}</span></td><td class="nowrap">${m2(p.m2c)}</td><td class="nowrap"><b>${eur(p.precio)}</b></td><td class="nowrap small">${p.precio && p.m2c ? eur(p.precio / p.m2c) : '—'}</td><td><span class="chip" style="background:${C.inmColor[p.estado]}22;color:${C.inmColor[p.estado]}">${esc(p.estado)}</span></td><td>${pubN(p) ? `<span class="chip g">Publicado · ${pubN(p)}</span>` : '<span class="chip n">No publicado</span>'}</td><td>${(p.adjuntos || []).length + (p.nDocs || 0)}</td><td>${matchesFor(p.id).length ? `<span class="chip o">${matchesFor(p.id).length}</span>` : '—'}</td></tr>`).join('')}</tbody></table></div>
+  <div class="lcards">${rows.map(p => `<div class="lcard" onclick="openInmueble('${p.id}')"><div class="ic" style="background:${C.inmColor[p.estado]}1f;color:${C.inmColor[p.estado]}">${ic(['Local', 'Oficina', 'Edificio', 'Nave', 'Hotel'].includes(p.tipo) ? 'building' : 'home')}</div><div class="bd"><div class="t"><span class="ref">${esc(p.ref)}</span> · ${esc(p.tipo)}</div><div class="s">${esc(p.direccion)}${p.zona ? ' · ' + esc(p.zona) : ''}</div><div class="chips"><span class="chip" style="background:${C.inmColor[p.estado]}22;color:${C.inmColor[p.estado]}">${esc(p.estado)}</span>${capChip(p)}<span class="chip n">${m2(p.m2c)}</span>${pubN(p) ? '<span class="chip g">Publicado</span>' : ''}${matchesFor(p.id).length ? `<span class="chip o">${matchesFor(p.id).length} cruces</span>` : ''}</div></div><div class="rt"><b class="num" style="font-size:13px">${eur(p.precio, true)}</b><div class="small muted">${esc(p.operacion)}</div></div></div>`).join('')}</div>` : `<div class="empty">${ic('home')}Sin inmuebles con esos filtros</div>`}</div>`;
 }
 
+function capChip(p) {
+  if (p.captacion === 'Colaborador' && p.colaboradorId) { const c = get(p.colaboradorId); return `<span class="chip p clk" onclick="event.stopPropagation();openContacto('${p.colaboradorId}')">${esc(c?.nombre || 'Colaborador')}</span>`; }
+  return '<span class="chip o">Propia</span>';
+}
 /* ---------- CLIENTES ---------- */
 function vClientes(el) {
   const q = norm(S.ui.clQ || ''), fr = S.ui.clR || '';
@@ -359,6 +364,7 @@ async function saveMember(id) {
 function vDatos(el) {
   const tipos = [['inmueble', 'Inmuebles'], ['contacto', 'Captación y clientes'], ['operacion', 'Operaciones'], ['visita', 'Visitas'], ['tarea', 'Tareas'], ['actividad', 'Actividad']];
   el.innerHTML = `<div class="grid g3">${tipos.map(([t, l], i) => `<div class="card pad"><div style="display:flex;align-items:center;gap:10px"><div class="alert-ic" style="background:${C.palette[i]}1f;color:${C.palette[i]}">${ic('db')}</div><div style="flex:1"><b style="color:var(--ink)">${l}</b><div class="small muted">${list(t).length} registros</div></div></div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn sm" onclick="exportTipo('${t}')">${ic('dl')} Excel (CSV)</button><button class="btn sm" onclick="download('csh_${t}.json',JSON.stringify(list('${t}'),null,1),'application/json')">JSON</button></div></div>`).join('')}</div>
+  <div class="card pad" style="margin-top:16px"><h3>Sincronizar carpeta NUESTROS CAPTACION</h3><p class="small muted">Desde el ordenador (Chrome o Edge), elige la carpeta <b>NUESTROS CAPTACION</b>. Cada subcarpeta <b>PV-NNNN - …</b> que no exista se crea como inmueble. Si el nombre termina en un nombre con minúsculas (p. ej. «- Javier Martín»), ese es el <b>colaborador</b>: se crea o enlaza su ficha de cliente. Si no hay nombre, es <b>captación propia</b>. No se modifica ni borra nada de la carpeta.</p><button class="btn pri" onclick="syncCarpeta()">${ic('up')} Elegir carpeta y sincronizar</button><div id="syncOut" class="small" style="margin-top:10px"></div></div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card pad"><h3>Copia de seguridad completa</h3><p class="small muted">Descarga todo el CRM en un archivo JSON. Guárdalo en «BASE DE DATOS CRM - NOV-2026».</p><button class="btn blue" onclick="download('CSH_CRM_backup_'+today()+'.json',JSON.stringify({version:3,fecha:nowIso(),registros:[...S.recs.values()]},null,1),'application/json')">${ic('dl')} Descargar copia</button>
       <label class="btn" style="margin-left:8px">${ic('up')} Importar JSON<input type="file" accept=".json" class="hidden" onchange="importJSON(this.files[0])"></label></div>
@@ -385,4 +391,33 @@ function quickAdd() {
   d.innerHTML = `<div class="overlay" style="justify-content:center;align-items:flex-end" onclick="closeMore()"></div><div class="more-sheet"><h3 style="margin:0 0 12px">Crear</h3><div class="more-grid">
   <button onclick="closeMore();openContacto(null)">${ic('magnet')}Captación</button><button onclick="closeMore();openInmueble(null)">${ic('home')}Inmueble</button><button onclick="closeMore();openVisita(null)">${ic('eye')}Visita</button><button onclick="closeMore();openOperacion(null)">${ic('pipe')}Operación</button><button onclick="closeMore();openTarea(null)">${ic('check')}Tarea</button><button onclick="closeMore();openExtract()">${ic('wand')}Extraer datos</button></div></div>`;
   document.body.appendChild(d);
+}
+
+async function syncCarpeta() {
+  const out = $('#syncOut');
+  if (!window.showDirectoryPicker) { out.innerHTML = 'Esta función necesita Chrome o Edge en un ordenador.'; return; }
+  let dir; try { dir = await window.showDirectoryPicker({ mode: 'read' }); } catch (e) { return; }
+  const log = []; let nuevos = 0, enlazados = 0, colNuevos = 0;
+  const findCol = nombre => list('contacto').find(c => norm(c.nombre) === norm(nombre));
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind !== 'directory') continue; const info = parseCarpeta(name); if (!info) continue;
+    let nDocs = 0, nFotos = 0;
+    try { for await (const [fn, fh] of h.entries()) { if (fh.kind === 'file') { /\.(jpe?g|png|webp|heic)$/i.test(fn) ? nFotos++ : nDocs++; } else if (/foto/i.test(fn)) { for await (const [, f2] of fh.entries()) if (f2.kind === 'file') nFotos++; } } } catch (e) { }
+    let colId = '';
+    if (info.colaborador) {
+      let c = findCol(info.colaborador);
+      if (!c) { const id = 'con_col_' + norm(info.colaborador).replace(/[^a-z0-9]+/g, '-'); await save('contacto', { id, nombre: info.colaborador, roles: ['Colaborador'], estado: 'Cliente', origen: 'Colaborador', agente: S.me?.nombre, fechaAlta: today(), intent: '', tipos: [], extras: [], adjuntos: [], notas: 'Colaborador · creado desde la carpeta NUESTROS CAPTACION' }, { silent: true }); colNuevos++; c = get(id); log.push('Colaborador nuevo: ' + info.colaborador); }
+      else if (!esColaborador(c)) { c.roles = [...new Set([...(c.roles || []), 'Colaborador'])]; await save('contacto', c, { silent: true }); }
+      colId = c.id;
+    }
+    const pid = 'inm_' + info.ref; const p = get(pid);
+    if (!p) {
+      await save('inmueble', { id: pid, ref: info.ref, estado: 'Captación', operacion: 'Venta', tipo: info.tipo, direccion: info.direccion, municipio: 'Madrid', provincia: 'Madrid', captacion: info.captacion, colaboradorId: colId, contacto: info.colaborador || '', rol: info.colaborador ? 'Colaborador' : '', agente: S.me?.nombre, fecha: today(), prioridad: 'Media', exclusiva: 'No', docs: {}, portales: {}, adjuntos: [], extras: [], nDocs, nFotos, carpeta: 'NUESTROS CAPTACION\\' + name }, { silent: true });
+      logAct(pid, 'Inmueble creado desde la carpeta de captación'); nuevos++; log.push('Nuevo inmueble ' + info.ref + ' · ' + (info.colaborador ? 'colaborador ' + info.colaborador : 'captación propia'));
+    } else if (p.captacion !== info.captacion || (p.colaboradorId || '') !== colId || p.nFotos !== nFotos || p.nDocs !== nDocs) {
+      p.captacion = info.captacion; p.colaboradorId = colId; p.nFotos = nFotos; p.nDocs = nDocs; await save('inmueble', p, { silent: true }); enlazados++;
+    }
+  }
+  out.innerHTML = `<b>Sincronización terminada.</b> ${nuevos} inmuebles nuevos · ${enlazados} actualizados · ${colNuevos} colaboradores nuevos.${log.length ? '<br>' + log.map(esc).join('<br>') : ''}`;
+  toast('Carpeta sincronizada');
 }

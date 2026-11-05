@@ -62,6 +62,21 @@ const C = {
 const intentOf = k => C.intents.find(i => i.k === k) || { l: k || '—', side: '' };
 const isDemanda = c => ['comprar', 'alquilar', 'invertir'].includes(c.intent);
 const isOferta = c => ['vender', 'arrendar'].includes(c.intent);
+const esColaborador = c => (c.roles || []).includes('Colaborador');
+const intentLabel = c => c.intent ? intentOf(c.intent).l : esColaborador(c) ? 'Colaborador' : '—';
+function aportados(cid) { return list('inmueble').filter(p => p.colaboradorId === cid).sort((a, b) => (a.ref || '').localeCompare(b.ref || '')); }
+function colaboradores() { return list('contacto').filter(c => esColaborador(c) || ['Agencia', 'Intermediario'].some(r => (c.roles || []).includes(r))).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')); }
+/* Regla de carpetas NUESTROS CAPTACION: si el último tramo del nombre lleva minúsculas es el colaborador; si no, captación propia */
+function parseCarpeta(name) {
+  const m = name.match(/^PV\s*-?\s*(\d+)/i); if (!m) return null;
+  const ref = 'PV-' + m[1].padStart(4, '0');
+  const segs = name.slice(m[0].length).split(/\s*-\s*/).map(x => x.trim()).filter(Boolean);
+  let colaborador = null; if (segs.length && /[a-záéíóúñ]/.test(segs[segs.length - 1])) colaborador = segs.pop();
+  let tipo = ''; const tmap = [['EDIFICIO', 'Edificio'], ['LOCAL', 'Local'], ['OFICINA', 'Oficina'], ['PISO', 'Piso'], ['ATICO', 'Ático'], ['CHALET', 'Casa / Chalet'], ['CASA', 'Casa / Chalet'], ['NAVE', 'Nave'], ['SOLAR', 'Suelo / Solar'], ['SUELO', 'Suelo / Solar'], ['FINCA', 'Finca rústica'], ['HOTEL', 'Hotel']];
+  const rest = []; for (const sg of segs) { const t = tmap.find(([k]) => norm(sg).toUpperCase().startsWith(k)); if (t && !tipo) { tipo = t[1]; const w = sg.split(/\s+/); if (w.length >= 3) rest.push(w.slice(1).join(' ')); } else rest.push(sg); }
+  const cap = w => w.toLowerCase().replace(/(^|\s)(\p{L})/gu, (a, b, c) => b + c.toUpperCase());
+  return { ref, colaborador, captacion: colaborador ? 'Colaborador' : 'Propia', tipo, direccion: cap(rest.join(' ').replace(/\s+/g, ' ')) };
+}
 
 /* ---------- registros ---------- */
 function list(tipo) { const out = []; for (const r of S.recs.values()) if (r.tipo === tipo) out.push({ ...r.data, id: r.id, _u: r.updated_at, _by: r.updated_by, _c: r.created_at }); return out; }
