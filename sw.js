@@ -1,5 +1,5 @@
-const V='csh-crm-v3.1.2';
-const CORE=['./','./index.html','./styles.css?v=3.1.2','./js/core.js?v=3.1.2','./js/views.js?v=3.1.2','./js/forms.js?v=3.1.2','./vendor/supabase.js','./manifest.webmanifest',
+const V='csh-crm-v3.1.3';
+const CORE=['./','./index.html','./styles.css?v=3.1.3','./js/core.js?v=3.1.3','./js/views.js?v=3.1.3','./js/forms.js?v=3.1.3','./vendor/supabase.js','./manifest.webmanifest',
  'https://rvuoqfsuswjnyytvitqb.supabase.co/storage/v1/object/public/csh-public/logo.png',
  'https://rvuoqfsuswjnyytvitqb.supabase.co/storage/v1/object/public/csh-public/icon-192.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>Promise.allSettled(CORE.map(u=>c.add(u)))).then(()=>self.skipWaiting()))});

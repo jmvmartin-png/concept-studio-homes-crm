@@ -95,7 +95,7 @@ function vDashboard(el) {
   const prevPond = enCurso.reduce((a, o) => a + honor(o) * (num(o.prob) ?? C.opProb[o.estado] ?? 0) / 100, 0);
   const activos = ps.filter(p => !['Cerrado', 'Descartado'].includes(p.estado));
   const wk = new Date(); const wEnd = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
-  const visSem = vs.filter(v => (v.fecha || '').slice(0, 10) >= today() && (v.fecha || '').slice(0, 10) <= wEnd && v.estado !== 'Cancelada');
+  const vSem = visitasSemana();
   const nuevos = (S._matches || []).filter(m => m.estado === 'nuevo');
   const hr = new Date().getHours(); const saludo = hr < 14 ? 'Buenos días' : hr < 21 ? 'Buenas tardes' : 'Buenas noches';
   const kpi = (c, l, icn, v, ft, goto) => `<div class="kpi c-${c}" onclick="go('${goto}')"><div class="lbl">${l}<span class="ico">${ic(icn)}</span></div><div class="val">${v}</div><div class="ft">${ft}</div></div>`;
@@ -126,7 +126,7 @@ function vDashboard(el) {
     ${kpi('hot', 'Cierres del mes', 'okc', cerradasMes.length, eur(cerradasMes.reduce((a, o) => a + honor(o), 0)) + ' cobrados', 'pipeline')}
     ${kpi('dark', 'Operaciones caídas', 'alert', caidas.length, eur(caidas.reduce((a, o) => a + honor(o), 0)) + ' perdidos', 'pipeline')}
     ${kpi('hot', 'Cruces nuevos', 'magnet', nuevos.length, (S._matches || []).length + ' cruces activos', 'avisos')}
-    ${kpi('dark', 'Visitas 7 días', 'eye', visSem.length, vs.filter(v => v.estado === 'Realizada').length + ' realizadas en total', 'visitas')}
+    ${kpi('dark', semana().proxima ? 'Visitas próx. semana' : 'Visitas esta semana', 'eye', vSem.total, vSem.prog + ' programadas · ' + vSem.hechas + ' realizadas', 'visitas')}
     ${kpi('orange', 'Tasa de conversión', 'trend', conv + '%', cerradas.length + ' cerradas · ' + caidas.length + ' caídas', 'pipeline')}
     ${kpi('solid', 'Honorario medio', 'euro', cerradas.length ? eur(cerradas.reduce((a, o) => a + honor(o), 0) / cerradas.length) : '—', activos.length + ' inmuebles activos', 'inmuebles')}
   </div>
@@ -146,7 +146,7 @@ function vDashboard(el) {
   <div class="grid g2">
     <div class="card"><div class="card-h"><h2>Mejores cruces</h2><button class="btn sm ghost" onclick="go('avisos')">Todos</button></div>
       ${(S._matches || []).slice(0, 4).map(m => `<div class="today-item" style="cursor:pointer" onclick="openContacto('${m.c.id}','cruces')"><div class="av" style="background:${scoreColor(m.score)}">${m.score}</div><div style="flex:1;min-width:0"><b style="color:var(--ink)">${esc(m.c.nombre)}</b><div class="small muted">${esc(intentOf(m.c.intent).l)} → ${esc(m.p.ref)} · ${esc(m.p.tipo)} · ${eur(m.p.precio, true)}</div></div>${m.estado === 'nuevo' ? '<span class="chip o">Nuevo</span>' : ''}</div>`).join('') || `<div class="empty">${ic('magnet')}Da de alta demandas en Captación y el CRM cruzará solo con tu cartera.</div>`}</div>
-    <div class="card"><div class="card-h"><h2>Equipo</h2><button class="btn sm ghost" onclick="go('equipo')">Ver</button></div>${teamRows()}</div>
+    <div class="card"><div class="card-h"><h2>Visitas de la semana</h2><button class="btn sm ghost" onclick="go('visitas')">Agenda</button></div>${teamRows()}</div>
   </div>`;
 }
 function donut(arr) {
@@ -155,8 +155,27 @@ function donut(arr) {
   const segs = arr.map(([k, v], i) => { const l = v / tot * Cc; const s = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${C.palette[i % 12]}" stroke-width="18" stroke-dasharray="${l} ${Cc - l}" stroke-dashoffset="${-acc}" transform="rotate(-90 60 60)"/>`; acc += l; return s; }).join('');
   return `<div class="donut-wrap"><svg width="120" height="120" viewBox="0 0 120 120">${segs}<text x="60" y="58" text-anchor="middle" font-family="Unbounded" font-size="20" font-weight="500" fill="#111827">${tot}</text><text x="60" y="76" text-anchor="middle" font-size="10" fill="#6b7280">contactos</text></svg><div class="legend">${arr.slice(0, 7).map(([k, v], i) => `<span><i style="background:${C.palette[i % 12]}"></i>${esc(k)} · <b>${v}</b></span>`).join('')}</div></div>`;
 }
+/* semana de trabajo: lunes a domingo; el domingo ya se muestra la semana siguiente */
+function semana() {
+  const d = new Date(); d.setHours(0, 0, 0, 0); const dow = d.getDay();
+  const ini = new Date(d); ini.setDate(d.getDate() + (dow === 0 ? 1 : 1 - dow));
+  const fin = new Date(ini); fin.setDate(ini.getDate() + 6);
+  const iso = x => new Date(x - x.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  const lab = x => x.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  return { ini: iso(ini), fin: iso(fin), label: lab(ini) + ' – ' + lab(fin), proxima: dow === 0 };
+}
+function visitasSemana(agente) {
+  const w = semana();
+  const vs = list('visita').filter(v => { const d = (v.fecha || '').slice(0, 10); return d >= w.ini && d <= w.fin && (!agente || v.agente === agente); });
+  return { prog: vs.filter(v => v.estado === 'Programada').length, hechas: vs.filter(v => v.estado === 'Realizada').length, total: vs.filter(v => v.estado !== 'Cancelada').length, lista: vs.filter(v => v.estado === 'Programada').sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')) };
+}
 function teamRows() {
-  return S.equipo.map(m => { const st = memberStats(m.nombre); return `<div class="today-item"><div class="av" style="background:${m.color}">${esc(m.iniciales)}</div><div style="flex:1"><b style="color:var(--ink)">${esc(m.nombre)}</b><div class="small muted">${st.cap} captaciones · ${st.vis} visitas · ${st.ops} operaciones</div></div><span class="num" style="color:var(--orange)">${eur(st.hon, true)}</span></div>`; }).join('');
+  const w = semana();
+  const filas = S.equipo.map(m => { const st = visitasSemana(m.nombre); const pct = st.total ? Math.round(st.hechas / st.total * 100) : 0;
+    return `<div class="today-item"><div class="av" style="background:${m.color}">${esc(m.iniciales)}</div><div style="flex:1;min-width:0"><b style="color:var(--ink)">${esc(m.nombre)}</b><div class="small muted">${st.prog} programadas · ${st.hechas} realizadas</div><div style="height:6px;background:#efefef;border-radius:9px;margin-top:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--orange)"></div></div></div><span class="num" style="font-size:20px;color:var(--ink)">${st.total}</span></div>`; }).join('');
+  const t = visitasSemana();
+  const prox = t.lista.slice(0, 5).map(v => { const p = get(v.inmuebleId); return `<div class="today-item" style="cursor:pointer" onclick="openVisita('${v.id}')"><span class="tm">${new Date(v.fecha).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })} ${ftime(v.fecha)}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)">${esc(v.cliente || 'Visita')} · ${esc(p?.ref || '')}</span><span class="small muted">${esc(initials(v.agente))}</span></div>`; }).join('');
+  return `<div class="small muted" style="padding:0 18px 8px">${w.proxima ? 'Próxima semana · ' : 'Semana · '}${w.label} · ${t.prog} programadas</div>${filas}${prox ? '<div class="small muted" style="padding:10px 18px 2px;font-weight:500">Agenda de visitas</div>' + prox : '<div class="empty small">Sin visitas programadas esta semana</div>'}`;
 }
 function memberStats(nombre) {
   const honor = o => num(o.honorarios) ?? ((num(o.importe) || 0) * (num(o.honorariosPct) || 0) / 100);
@@ -319,9 +338,9 @@ async function toggleTarea(id, v) { const t = get(id); t.hecha = v; await save('
 
 /* ---------- EQUIPO ---------- */
 function vEquipo(el) {
-  el.innerHTML = `<div class="grid g2">${S.equipo.map(m => { const st = memberStats(m.nombre); return `<div class="card pad" style="background:linear-gradient(160deg,#fff 50%,${m.color}14)">
+  el.innerHTML = `<div class="grid g2">${S.equipo.map(m => { const st = memberStats(m.nombre); const vw = visitasSemana(m.nombre); return `<div class="card pad" style="background:linear-gradient(160deg,#fff 50%,${m.color}14)">
     <div style="display:flex;gap:14px;align-items:center"><div class="av lg" style="background:linear-gradient(135deg,${m.color},${m.color}bb)">${esc(m.iniciales)}</div><div style="flex:1"><h2>${esc(m.nombre)}</h2><div class="muted small">${esc(m.rol || '')}</div><div class="small" style="margin-top:4px">${m.email ? `<span class="chip g">${ic('okc').replace('<svg', '<svg width="12" height="12"')} Acceso activo · ${esc(m.email)}</span>` : '<span class="chip a">Pendiente de email de acceso</span>'}</div></div></div>
-    <div class="grid g4" style="margin-top:16px;gap:8px">${[['Captaciones', st.cap, 1], ['Inmuebles', st.inm, 0], ['Visitas', st.vis, 0], ['Honorarios', eur(st.hon, true), 1]].map(([l, v, o]) => `<div style="background:${o ? '#fff1ea' : '#efefef'};border-radius:14px;padding:10px"><div class="num" style="font-size:17px;color:${o ? '#ff7440' : '#212934'}">${v}</div><div class="small muted">${l}</div></div>`).join('')}</div>
+    <div class="grid g4" style="margin-top:16px;gap:8px">${[['Visitas semana', vw.total, 1], ['Programadas', vw.prog, 0], ['Realizadas', vw.hechas, 0], ['Captaciones', st.cap, 1]].map(([l, v, o]) => `<div style="background:${o ? '#fff1ea' : '#efefef'};border-radius:14px;padding:10px"><div class="num" style="font-size:17px;color:${o ? '#ff7440' : '#212934'}">${v}</div><div class="small muted">${l}</div></div>`).join('')}</div>
     <div class="fg" style="margin-top:14px"><div class="fld"><label>Email de acceso</label><input id="eqm_${m.id}" type="email" value="${esc(m.email || '')}" placeholder="email@…"></div><div class="fld"><label>Teléfono</label><input id="eqt_${m.id}" value="${esc(m.telefono || '')}"></div></div>
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm blue" onclick="saveMember('${m.id}')">Guardar</button>${m.telefono ? `<a class="btn sm" href="tel:${esc(m.telefono)}">${ic('phone')} Llamar</a>` : ''}</div></div>`; }).join('')}</div>
   <div class="card pad" style="margin-top:16px"><h3 style="margin-bottom:6px">Cómo entra Jesús Romero</h3><p class="small muted" style="margin:0">1) Escribe aquí su email y guarda. 2) Él abre la app, pulsa <b>Crear acceso</b> con ese email y elige su contraseña. 3) Instala la app desde el menú del navegador → <b>Añadir a pantalla de inicio</b>. Solo los emails de este equipo pueden ver los datos.</p></div>`;
