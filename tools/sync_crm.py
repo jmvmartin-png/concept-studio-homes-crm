@@ -12,7 +12,8 @@ Regla de nombres: si el último tramo del nombre de la carpeta lleva minúsculas
 el colaborador; si no, es captación propia.
 
 Uso:
-  python3 sync_crm.py --base ".../NUESTROS CAPTACION" --existing ids.txt --agente "Jesús M.V." > nuevo.sql
+  python3 sync_crm.py --base ".../NUESTROS CAPTACION" --existing ids.txt --outdir salida
+  -> crea salida/sync_parte_N.sql (bloques de ~25 KB) e imprime {"partes": N, "filas": M}
   (ids.txt: un id por línea, los que ya hay en csh_registros)
 No modifica ni borra nada de la carpeta: solo lee.
 """
@@ -103,6 +104,7 @@ def main():
     ap.add_argument('--existing', required=True)
     ap.add_argument('--agente', default='Jesús M.V.')
     ap.add_argument('--hoy', default=dt.date.today().isoformat())
+    ap.add_argument('--outdir', default='.')
     a = ap.parse_args()
     existing = set(l.strip() for l in open(a.existing, encoding='utf-8') if l.strip())
     hoy = a.hoy
@@ -181,11 +183,23 @@ def main():
                 quien = f' con {colab}' if colab else ''
                 add('tar_auto_' + ref, 'tarea', {'titulo': f'Revisar nuevo inmueble {ref}{quien}', 'fecha': hoy, 'agente': a.agente,
                                                  'refId': 'inm_' + ref, 'hecha': False, 'notas': 'Alta automática desde la carpeta'})
-    if rows:
-        vals = ',\n'.join("('%s','%s',$j$%s$j$::jsonb)" % (i.replace("'", "''"), t, json.dumps(d, ensure_ascii=False)) for i, t, d in rows)
-        print('insert into public.csh_registros (id, tipo, data) values\n' + vals + '\non conflict (id) do nothing;')
-    else:
-        print('-- sin novedades')
+    # SQL en bloques de ~25 KB: sync_parte_1.sql, sync_parte_2.sql… (en --outdir)
+    os.makedirs(a.outdir, exist_ok=True)
+    for f in os.listdir(a.outdir):
+        if f.startswith('sync_parte_') and f.endswith('.sql'):
+            os.remove(os.path.join(a.outdir, f))
+    partes, actual, tam = [], [], 0
+    for i, t, d in rows:
+        v = "('%s','%s',$j$%s$j$::jsonb)" % (i.replace("'", "''"), t, json.dumps(d, ensure_ascii=False))
+        if actual and tam + len(v) > 25000:
+            partes.append(actual); actual, tam = [], 0
+        actual.append(v); tam += len(v)
+    if actual:
+        partes.append(actual)
+    for k, p in enumerate(partes, 1):
+        with open(os.path.join(a.outdir, f'sync_parte_{k}.sql'), 'w', encoding='utf-8') as fh:
+            fh.write('insert into public.csh_registros (id, tipo, data) values\n' + ',\n'.join(p) + '\non conflict (id) do nothing;\n')
+    print(json.dumps({'partes': len(partes), 'filas': len(rows)}))
     sys.stderr.write(json.dumps({k: len(v) for k, v in resumen.items()}, ensure_ascii=False) + '\n')
     sys.stderr.write(json.dumps(resumen, ensure_ascii=False) + '\n')
 
