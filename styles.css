@@ -298,3 +298,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 }
 @media (max-width:420px){.fg{grid-template-columns:1fr}}
 @media print{.sidebar,.tabbar,.mob-head,.fab,.topbar .actions{display:none!important}}
+
+.clk{cursor:pointer;transition:transform .12s,filter .12s}
+.clk:hover{filter:brightness(1.04)}
+.clk:active{transform:scale(.98)}
+.bar-row.clk:hover span:first-child{color:var(--orange)}
+.hero-stats .clk:hover b{color:var(--orange-2)}

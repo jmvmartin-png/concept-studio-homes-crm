@@ -68,6 +68,9 @@ function renderChrome() {
   $('#sideUser').innerHTML = `<div class="av" style="background:${me.color || '#ff7440'}">${esc(me.iniciales || 'U')}</div><div class="who"><b>${esc(me.nombre || S.user?.email || '')}</b><span>${esc(me.rol || '')}</span></div><button class="btn icon ghost" style="color:#8a97ab" data-logout title="Salir">${ic('logout')}</button>`;
   setSync(S.sync);
 }
+const FILTROS = ['capE', 'capA', 'capI', 'capQ', 'inE', 'inO', 'inT', 'inQ', 'clQ', 'clR', 'clO', 'viA', 'pipeFocus'];
+function goF(v, f = {}) { FILTROS.forEach(k => delete S.ui[k]); Object.assign(S.ui, f); go(v); }
+function filtroChip(k, label) { return S.ui[k] ? `<span class="chip o clk" onclick="delete S.ui['${k}'];render()">${esc(label)}: ${esc(S.ui[k])} ✕</span>` : ''; }
 function go(v) { S.view = v; closeMore(); window.scrollTo(0, 0); render(); try { history.replaceState(null, '', '?go=' + v); } catch (e) { } }
 
 function render() {
@@ -98,7 +101,7 @@ function vDashboard(el) {
   const vSem = visitasSemana();
   const nuevos = (S._matches || []).filter(m => m.estado === 'nuevo');
   const hr = new Date().getHours(); const saludo = hr < 14 ? 'Buenos días' : hr < 21 ? 'Buenas tardes' : 'Buenas noches';
-  const kpi = (c, l, icn, v, ft, goto) => `<div class="kpi c-${c}" onclick="go('${goto}')"><div class="lbl">${l}<span class="ico">${ic(icn)}</span></div><div class="val">${v}</div><div class="ft">${ft}</div></div>`;
+  const kpi = (c, l, icn, v, ft, goto) => `<div class="kpi c-${c}" onclick="goF('${goto}')"><div class="lbl">${l}<span class="ico">${ic(icn)}</span></div><div class="val">${v}</div><div class="ft">${ft}</div></div>`;
 
   const leadSt = C.leadEstados.map(s => ({ s, n: cs.filter(c => c.estado === s).length }));
   const opSt = C.opEstados.map(s => ({ s, n: os.filter(o => o.estado === s).length, v: os.filter(o => o.estado === s).reduce((a, o) => a + honor(o), 0) }));
@@ -113,10 +116,10 @@ function vDashboard(el) {
     <div class="hi">${saludo}, ${esc((S.me?.nombre || '').split(' ')[0] || '')} · ${new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
     <h1>Concept Studio Homes</h1>
     <div class="hero-stats">
-      <div><b>${eur(activos.reduce((a, p) => a + (num(p.precio) || 0), 0), true)}</b><span>Valor de cartera activa</span></div>
-      <div><b>${eur(prevPond, true)}</b><span>Previsión ponderada de honorarios</span></div>
-      <div><b>${nuevos.length}</b><span>Cruces nuevos para trabajar</span></div>
-      <div><b>${hoy.length}</b><span>Pendientes hoy</span></div>
+      <div class="clk" onclick="goF('inmuebles')"><b>${eur(activos.reduce((a, p) => a + (num(p.precio) || 0), 0), true)}</b><span>Valor de cartera activa</span></div>
+      <div class="clk" onclick="goF('pipeline')"><b>${eur(prevPond, true)}</b><span>Previsión ponderada de honorarios</span></div>
+      <div class="clk" onclick="S.ui.avf='nuevo';goF('avisos')"><b>${nuevos.length}</b><span>Cruces nuevos para trabajar</span></div>
+      <div class="clk" onclick="goF('visitas',{viT:'agenda'})"><b>${hoy.length}</b><span>Pendientes hoy</span></div>
     </div>
     <div class="hero-act"><button class="btn" onclick="go('avisos')">${ic('bell')} Ver avisos</button><button class="btn pri" onclick="openContacto(null)">${ic('plus')} Captación</button></div>
   </div>
@@ -132,16 +135,16 @@ function vDashboard(el) {
   </div>
   <div class="grid g2" style="margin-bottom:16px">
     <div class="card"><div class="card-h"><h2>Embudo de captación</h2><button class="btn sm ghost" onclick="go('captacion')">Ver</button></div>
-      <div class="funnel">${leadSt.filter(x => x.s !== 'Perdido').map(x => `<div class="st" style="background:linear-gradient(160deg,${C.leadColor[x.s]},${C.leadColor[x.s]}cc)"><b>${x.n}</b><span>${x.s}</span></div>`).join('')}</div></div>
+      <div class="funnel">${leadSt.filter(x => x.s !== 'Perdido').map(x => `<div class="st clk" onclick="goF('captacion',{capMode:'lista',capE:'${x.s}'})" style="background:linear-gradient(160deg,${C.leadColor[x.s]},${C.leadColor[x.s]}cc)"><b>${x.n}</b><span>${x.s}</span></div>`).join('')}</div></div>
     <div class="card"><div class="card-h"><h2>Pipeline de operaciones</h2><button class="btn sm ghost" onclick="go('pipeline')">Ver</button></div>
-      <div class="funnel">${opSt.filter(x => x.s !== 'Caída').map(x => `<div class="st" style="background:linear-gradient(160deg,${C.opColor[x.s]},${C.opColor[x.s]}cc)"><b>${x.n}</b><span>${x.s}</span><small>${eur(x.v, true)}</small></div>`).join('')}</div></div>
+      <div class="funnel">${opSt.filter(x => x.s !== 'Caída').map(x => `<div class="st clk" onclick="goF('pipeline',{pipeFocus:'${x.s}'})" style="background:linear-gradient(160deg,${C.opColor[x.s]},${C.opColor[x.s]}cc)"><b>${x.n}</b><span>${x.s}</span><small>${eur(x.v, true)}</small></div>`).join('')}</div></div>
   </div>
   <div class="grid g3" style="margin-bottom:16px">
-    <div class="card"><div class="card-h"><h2>Hoy</h2><span class="chip o">${hoy.length}</span></div>
+    <div class="card"><div class="card-h clk" onclick="goF('visitas',{viT:'agenda'})"><h2>Hoy</h2><span class="chip o">${hoy.length}</span></div>
       ${hoy.length ? hoy.slice(0, 7).map(agendaRow).join('') : `<div class="empty">${ic('okc')}Nada pendiente para hoy</div>`}</div>
-    <div class="card"><div class="card-h"><h2>Cartera por tipo</h2></div>
-      <div class="bars">${tipoArr.length ? tipoArr.map(([t, n], i) => `<div class="bar-row"><span>${esc(t)}</span><div class="tr"><div class="fl" style="width:${n / maxT * 100}%;background:${C.palette[i % 12]}"></div></div><span class="v">${n}</span></div>`).join('') : '<div class="empty">Sin inmuebles</div>'}</div></div>
-    <div class="card"><div class="card-h"><h2>Origen de contactos</h2></div>${donut(oriArr)}</div>
+    <div class="card"><div class="card-h clk" onclick="goF('inmuebles')"><h2>Cartera por tipo</h2></div>
+      <div class="bars">${tipoArr.length ? tipoArr.map(([t, n], i) => `<div class="bar-row clk" onclick="goF('inmuebles',{inT:${esc(JSON.stringify(t))}})"><span>${esc(t)}</span><div class="tr"><div class="fl" style="width:${n / maxT * 100}%;background:${C.palette[i % 12]}"></div></div><span class="v">${n}</span></div>`).join('') : '<div class="empty">Sin inmuebles</div>'}</div></div>
+    <div class="card"><div class="card-h clk" onclick="goF('clientes')"><h2>Origen de contactos</h2></div>${donut(oriArr)}</div>
   </div>
   <div class="grid g2">
     <div class="card"><div class="card-h"><h2>Mejores cruces</h2><button class="btn sm ghost" onclick="go('avisos')">Todos</button></div>
@@ -152,8 +155,8 @@ function vDashboard(el) {
 function donut(arr) {
   const tot = arr.reduce((a, x) => a + x[1], 0); if (!tot) return '<div class="empty">Sin contactos todavía</div>';
   let acc = 0; const R = 42, Cc = 2 * Math.PI * R;
-  const segs = arr.map(([k, v], i) => { const l = v / tot * Cc; const s = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${C.palette[i % 12]}" stroke-width="18" stroke-dasharray="${l} ${Cc - l}" stroke-dashoffset="${-acc}" transform="rotate(-90 60 60)"/>`; acc += l; return s; }).join('');
-  return `<div class="donut-wrap"><svg width="120" height="120" viewBox="0 0 120 120">${segs}<text x="60" y="58" text-anchor="middle" font-family="Unbounded" font-size="20" font-weight="500" fill="#111827">${tot}</text><text x="60" y="76" text-anchor="middle" font-size="10" fill="#6b7280">contactos</text></svg><div class="legend">${arr.slice(0, 7).map(([k, v], i) => `<span><i style="background:${C.palette[i % 12]}"></i>${esc(k)} · <b>${v}</b></span>`).join('')}</div></div>`;
+  const segs = arr.map(([k, v], i) => { const l = v / tot * Cc; const s = `<circle class="clk" onclick="goF('clientes',{clO:${esc(JSON.stringify(k))}})" r="${R}" cx="60" cy="60" fill="none" stroke="${C.palette[i % 12]}" stroke-width="18" stroke-dasharray="${l} ${Cc - l}" stroke-dashoffset="${-acc}" transform="rotate(-90 60 60)"/>`; acc += l; return s; }).join('');
+  return `<div class="donut-wrap"><svg width="120" height="120" viewBox="0 0 120 120">${segs}<text x="60" y="58" text-anchor="middle" font-family="Unbounded" font-size="20" font-weight="500" fill="#111827">${tot}</text><text x="60" y="76" text-anchor="middle" font-size="10" fill="#6b7280">contactos</text></svg><div class="legend">${arr.slice(0, 7).map(([k, v], i) => `<span class="clk" onclick="goF('clientes',{clO:${esc(JSON.stringify(k))}})"><i style="background:${C.palette[i % 12]}"></i>${esc(k)} · <b>${v}</b></span>`).join('')}</div></div>`;
 }
 /* semana de trabajo: lunes a domingo; el domingo ya se muestra la semana siguiente */
 function semana() {
@@ -172,10 +175,10 @@ function visitasSemana(agente) {
 function teamRows() {
   const w = semana();
   const filas = S.equipo.map(m => { const st = visitasSemana(m.nombre); const pct = st.total ? Math.round(st.hechas / st.total * 100) : 0;
-    return `<div class="today-item"><div class="av" style="background:${m.color}">${esc(m.iniciales)}</div><div style="flex:1;min-width:0"><b style="color:var(--ink)">${esc(m.nombre)}</b><div class="small muted">${st.prog} programadas · ${st.hechas} realizadas</div><div style="height:6px;background:#efefef;border-radius:9px;margin-top:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--orange)"></div></div></div><span class="num" style="font-size:20px;color:var(--ink)">${st.total}</span></div>`; }).join('');
+    return `<div class="today-item clk" onclick="goF('visitas',{viT:'visitas',viA:${esc(JSON.stringify(m.nombre))}})"><div class="av" style="background:${m.color}">${esc(m.iniciales)}</div><div style="flex:1;min-width:0"><b style="color:var(--ink)">${esc(m.nombre)}</b><div class="small muted">${st.prog} programadas · ${st.hechas} realizadas</div><div style="height:6px;background:#efefef;border-radius:9px;margin-top:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--orange)"></div></div></div><span class="num" style="font-size:20px;color:var(--ink)">${st.total}</span></div>`; }).join('');
   const t = visitasSemana();
   const prox = t.lista.slice(0, 5).map(v => { const p = get(v.inmuebleId); return `<div class="today-item" style="cursor:pointer" onclick="openVisita('${v.id}')"><span class="tm">${new Date(v.fecha).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })} ${ftime(v.fecha)}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)">${esc(v.cliente || 'Visita')} · ${esc(p?.ref || '')}</span><span class="small muted">${esc(initials(v.agente))}</span></div>`; }).join('');
-  return `<div class="small muted" style="padding:0 18px 8px">${w.proxima ? 'Próxima semana · ' : 'Semana · '}${w.label} · ${t.prog} programadas</div>${filas}${prox ? '<div class="small muted" style="padding:10px 18px 2px;font-weight:500">Agenda de visitas</div>' + prox : '<div class="empty small">Sin visitas programadas esta semana</div>'}`;
+  return `<div class="small muted clk" onclick="goF('visitas',{viT:'visitas'})" style="padding:0 18px 8px">${w.proxima ? 'Próxima semana · ' : 'Semana · '}${w.label} · ${t.prog} programadas</div>${filas}${prox ? '<div class="small muted" style="padding:10px 18px 2px;font-weight:500">Agenda de visitas</div>' + prox : '<div class="empty small">Sin visitas programadas esta semana</div>'}`;
 }
 function memberStats(nombre) {
   const honor = o => num(o.honorarios) ?? ((num(o.importe) || 0) * (num(o.honorariosPct) || 0) / 100);
@@ -212,14 +215,14 @@ function vAvisos(el) {
     </div>
     <div>
       <div class="toolbar"><h2 style="flex:1">Avisos del sistema</h2><span class="chip n">${sys.length}</span></div>
-      ${sys.map((a, i) => `<div class="alert ${a.lvl}"><div class="alert-ic" style="background:${a.lvl === 'bad' ? 'var(--red-soft)' : a.lvl === 'warn' ? 'var(--amber-soft)' : 'var(--blue-soft)'};color:${a.lvl === 'bad' ? 'var(--red)' : a.lvl === 'warn' ? 'var(--amber)' : 'var(--blue)'}">${ic(a.ic)}</div><div class="bd"><div class="ttl">${esc(a.t)}</div><div class="small muted">${esc(a.s)}</div><div class="acts"><button class="btn sm" onclick="S._sys[${i}].open()">Abrir</button>${a.tel ? `<a class="btn sm" href="tel:${esc(a.tel)}">${ic('phone')} Llamar</a>` : ''}</div></div></div>`).join('') || `<div class="card empty">${ic('okc')}Todo al día</div>`}
+      ${sys.map((a, i) => `<div class="alert ${a.lvl} clk" onclick="if(!event.target.closest('a,button'))S._sys[${i}].open()"><div class="alert-ic" style="background:${a.lvl === 'bad' ? 'var(--red-soft)' : a.lvl === 'warn' ? 'var(--amber-soft)' : 'var(--blue-soft)'};color:${a.lvl === 'bad' ? 'var(--red)' : a.lvl === 'warn' ? 'var(--amber)' : 'var(--blue)'}">${ic(a.ic)}</div><div class="bd"><div class="ttl">${esc(a.t)}</div><div class="small muted">${esc(a.s)}</div><div class="acts"><button class="btn sm" onclick="S._sys[${i}].open()">Abrir</button>${a.tel ? `<a class="btn sm" href="tel:${esc(a.tel)}">${ic('phone')} Llamar</a>` : ''}</div></div></div>`).join('') || `<div class="card empty">${ic('okc')}Todo al día</div>`}
     </div>
   </div>`;
 }
 function matchCard(m) {
   const p = m.p, c = m.c; const isCap = !!p._cap;
   const chip = w => `<span class="chip ${w.ok === true ? 'g' : w.ok === 'warn' ? 'a' : 'r'}">${w.ok === true ? '✓' : w.ok === 'warn' ? '≈' : '✕'} ${esc(w.t)}</span>`;
-  return `<div class="alert" style="border-left-color:${scoreColor(m.score)}">
+  return `<div class="alert clk" onclick="if(!event.target.closest('a,button'))openContacto('${c.id}','cruces')" style="border-left-color:${scoreColor(m.score)}">
     <div class="score" style="background:conic-gradient(${scoreColor(m.score)} ${m.score * 3.6}deg,#eef0f4 0)"><span style="background:#fff;width:44px;height:44px;border-radius:50%;display:grid;place-items:center">${m.score}%</span></div>
     <div class="bd"><div class="ttl">${esc(c.nombre || 'Contacto')} <span class="muted" style="font-weight:500">quiere ${esc(intentOf(c.intent).l.toLowerCase())}</span> ${m.estado === 'nuevo' ? '<span class="chip o">Nuevo</span>' : m.estado === 'contactado' ? '<span class="chip b">Ofrecido</span>' : ''}</div>
       <div class="small" style="margin-top:3px"><b class="ref">${esc(p.ref)}</b> · ${esc(p.tipo)} · ${esc(p.direccion || p.zona || '')} · <b>${eur(p.precio, true)}</b>${isCap ? ' · <span class="chip a">captación sin convertir</span>' : ''}</div>
@@ -248,14 +251,14 @@ async function markMatch(key, estado) {
 /* ---------- CAPTACIÓN ---------- */
 function vCaptacion(el) {
   const mode = S.ui.capMode || 'kanban'; const q = norm(S.ui.capQ || ''); const fi = S.ui.capI || '';
-  const all = list('contacto').filter(c => (!fi || c.intent === fi) && (!q || norm([c.nombre, c.telefono, c.email, c.zonas, c.oDireccion, c.notas].join(' ')).includes(q)));
+  const all = list('contacto').filter(c => (!fi || c.intent === fi) && (!S.ui.capE || c.estado === S.ui.capE) && (!S.ui.capA || c.agente === S.ui.capA) && (!q || norm([c.nombre, c.telefono, c.email, c.zonas, c.oDireccion, c.notas].join(' ')).includes(q)));
   actions(`<button class="btn" onclick="openExtract()">${ic('wand')} Extraer de texto</button><button class="btn pri" onclick="openContacto(null)">${ic('plus')} Nueva captación</button>`);
   const intentBtns = `<div class="seg"><button class="${!fi ? 'on' : ''}" onclick="S.ui.capI='';render()">Todos</button>${C.intents.map(i => `<button class="${fi === i.k ? 'on' : ''}" onclick="S.ui.capI='${i.k}';render()">${i.l}</button>`).join('')}</div>`;
   el.innerHTML = `
   <div class="toolbar"><div class="search">${ic('search')}<input placeholder="Buscar nombre, teléfono, zona…" value="${esc(S.ui.capQ || '')}" oninput="S.ui.capQ=this.value;clearTimeout(S._t);S._t=setTimeout(()=>{render();const i=$('.search input');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>
   <div class="seg"><button class="${mode === 'kanban' ? 'on' : ''}" onclick="S.ui.capMode='kanban';render()">Embudo</button><button class="${mode === 'lista' ? 'on' : ''}" onclick="S.ui.capMode='lista';render()">Lista</button></div>
   <button class="btn" onclick="openExtract()">${ic('wand')}<span class="btn-label"> Extraer</span></button></div>
-  <div class="toolbar" style="overflow-x:auto;flex-wrap:nowrap">${intentBtns}</div>
+  <div class="toolbar" style="overflow-x:auto;flex-wrap:nowrap">${intentBtns}</div>${S.ui.capE || S.ui.capA ? `<div class="toolbar">${filtroChip('capE', 'Estado')}${filtroChip('capA', 'Agente')}</div>` : ''}
   ${mode === 'kanban' ? kanban(C.leadEstados, C.leadColor, all, 'estado', c => `<div class="kcard" draggable="true" data-id="${c.id}" style="border-top-color:${scoreColor(leadScore(c))}" onclick="openContacto('${c.id}')">
       <div class="t">${esc(c.nombre || 'Sin nombre')}</div><div class="s">${esc(intentOf(c.intent).l)} · ${esc(resumenBusca(c))}</div>
       <div class="r"><span class="chip" style="background:${scoreColor(leadScore(c))}1f;color:${scoreColor(leadScore(c))}">★ ${leadScore(c)}</span>${matchesFor(c.id).length ? `<span class="chip o">${ic('magnet', '').replace('<svg', '<svg width="12" height="12"')} ${matchesFor(c.id).length}</span>` : ''}<span class="small muted">${esc(initials(c.agente))}</span></div></div>`, 'contacto')
@@ -304,10 +307,10 @@ function vInmuebles(el) {
 /* ---------- CLIENTES ---------- */
 function vClientes(el) {
   const q = norm(S.ui.clQ || ''), fr = S.ui.clR || '';
-  const rows = list('contacto').filter(c => (!fr || (c.roles || []).includes(fr) || c.estado === fr) && (!q || norm([c.nombre, c.telefono, c.email, c.empresa, c.notas].join(' ')).includes(q)));
+  const rows = list('contacto').filter(c => (!fr || (c.roles || []).includes(fr) || c.estado === fr) && (!S.ui.clO || (c.origen || 'Sin origen') === S.ui.clO) && (!q || norm([c.nombre, c.telefono, c.email, c.empresa, c.notas].join(' ')).includes(q)));
   actions(`<button class="btn" onclick="exportTipo('contacto')">${ic('dl')} CSV</button><button class="btn pri" onclick="openContacto(null)">${ic('plus')} Nuevo contacto</button>`);
   el.innerHTML = `<div class="toolbar"><div class="search">${ic('search')}<input placeholder="Buscar en la cartera de clientes…" value="${esc(S.ui.clQ || '')}" oninput="S.ui.clQ=this.value;clearTimeout(S._t);S._t=setTimeout(()=>{render();const i=$('.search input');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>
-  <select class="f" onchange="S.ui.clR=this.value;render()"><option value="">Todos los perfiles</option>${C.roles.map(r => `<option ${fr === r ? 'selected' : ''}>${r}</option>`).join('')}<option ${fr === 'Cliente' ? 'selected' : ''}>Cliente</option></select></div>${contactTable(rows)}`;
+  <select class="f" onchange="S.ui.clR=this.value;render()"><option value="">Todos los perfiles</option>${C.roles.map(r => `<option ${fr === r ? 'selected' : ''}>${r}</option>`).join('')}<option ${fr === 'Cliente' ? 'selected' : ''}>Cliente</option></select>${filtroChip('clO', 'Origen')}</div>${contactTable(rows)}`;
 }
 
 /* ---------- PIPELINE ---------- */
@@ -318,6 +321,7 @@ function vPipeline(el) {
   el.innerHTML = kanban(C.opEstados, C.opColor, os, 'estado', o => { const p = get(o.inmuebleId); return `<div class="kcard" draggable="true" data-id="${o.id}" style="border-top-color:${C.opColor[o.estado]}" onclick="openOperacion('${o.id}')"><div class="t">${esc(o.titulo || 'Operación')}</div><div class="s">${esc(p ? p.ref + ' · ' + p.tipo : '')}${o.compradorId ? ' · ' + esc(get(o.compradorId)?.nombre || '') : ''}</div><div class="r"><b class="num" style="font-size:13px">${eur(num(o.importe), true)}</b><span class="chip g">${eur(honor(o), true)}</span><span class="small muted">${num(o.prob) ?? C.opProb[o.estado]}% · ${esc(initials(o.agente))}</span></div></div>`; }, 'operacion', r => eur(r.reduce((a, o) => a + honor(o), 0), true))
     + (os.length ? '' : `<div class="card empty" style="margin-top:12px">${ic('pipe')}Crea una operación cuando un cliente haga una oferta sobre un inmueble. Arrastra las tarjetas entre columnas.</div>`);
   bindKanban('operacion', 'estado');
+  if (S.ui.pipeFocus) { const col = [...document.querySelectorAll('.kanban .col')].find(c => c.dataset.st === S.ui.pipeFocus); if (col) { col.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' }); col.style.outline = '2px solid var(--orange)'; } delete S.ui.pipeFocus; }
 }
 
 /* ---------- VISITAS ---------- */
@@ -330,9 +334,9 @@ function vVisitas(el) {
     const ts = list('tarea').sort((a, b) => (a.hecha - b.hecha) || (a.fecha || '9').localeCompare(b.fecha || '9'));
     el.innerHTML = seg + `<div class="card">${ts.map(x => `<div class="today-item"><input type="checkbox" ${x.hecha ? 'checked' : ''} onchange="toggleTarea('${x.id}',this.checked)" style="width:20px;height:20px"><div style="flex:1;cursor:pointer" onclick="openTarea('${x.id}')"><b style="color:var(--ink);${x.hecha ? 'text-decoration:line-through;opacity:.5' : ''}">${esc(x.titulo)}</b><div class="small muted">${fdate(x.fecha)} ${esc(x.hora || '')} · ${esc(x.agente || '')}</div></div>${!x.hecha && x.fecha && x.fecha < today() ? '<span class="chip r">Vencida</span>' : ''}</div>`).join('') || `<div class="empty">${ic('check')}Sin tareas</div>`}</div>`; return;
   }
-  const vs = list('visita').sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+  const vs = list('visita').filter(v => !S.ui.viA || v.agente === S.ui.viA).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
   const col = { Programada: 'b', Realizada: 'g', Cancelada: 'n', 'No presentado': 'r' };
-  el.innerHTML = seg + `<div class="card">${vs.length ? vs.map(v => { const p = get(v.inmuebleId); return `<div class="lcard" style="cursor:pointer;display:flex" onclick="openVisita('${v.id}')"><div class="ic" style="background:var(--purple-soft);color:var(--purple)">${ic('eye')}</div><div class="bd"><div class="t">${esc(v.cliente || 'Visitante')} ${v.firma ? '<span class="chip g">Firmado</span>' : ''}</div><div class="s">${p ? esc(p.ref + ' · ' + p.direccion) : ''}</div><div class="chips"><span class="chip ${col[v.estado] || 'n'}">${esc(v.estado)}</span>${v.interes ? `<span class="chip ${v.interes === 'Caliente' ? 'o' : 'n'}">${esc(v.interes)}</span>` : ''}${num(v.oferta) ? `<span class="chip p">Oferta ${eur(num(v.oferta), true)}</span>` : ''}</div></div><div class="rt"><b class="small">${fdt(v.fecha)}</b><div class="small muted">${esc(initials(v.agente))}</div></div></div>`; }).join('') : `<div class="empty">${ic('eye')}Sin visitas registradas</div>`}</div>`;
+  el.innerHTML = seg + (S.ui.viA ? `<div class="toolbar">${filtroChip('viA', 'Agente')}</div>` : '') + `<div class="card">${vs.length ? vs.map(v => { const p = get(v.inmuebleId); return `<div class="lcard" style="cursor:pointer;display:flex" onclick="openVisita('${v.id}')"><div class="ic" style="background:var(--purple-soft);color:var(--purple)">${ic('eye')}</div><div class="bd"><div class="t">${esc(v.cliente || 'Visitante')} ${v.firma ? '<span class="chip g">Firmado</span>' : ''}</div><div class="s">${p ? esc(p.ref + ' · ' + p.direccion) : ''}</div><div class="chips"><span class="chip ${col[v.estado] || 'n'}">${esc(v.estado)}</span>${v.interes ? `<span class="chip ${v.interes === 'Caliente' ? 'o' : 'n'}">${esc(v.interes)}</span>` : ''}${num(v.oferta) ? `<span class="chip p">Oferta ${eur(num(v.oferta), true)}</span>` : ''}</div></div><div class="rt"><b class="small">${fdt(v.fecha)}</b><div class="small muted">${esc(initials(v.agente))}</div></div></div>`; }).join('') : `<div class="empty">${ic('eye')}Sin visitas registradas</div>`}</div>`;
 }
 async function toggleTarea(id, v) { const t = get(id); t.hecha = v; await save('tarea', t, { silent: true }); }
 
@@ -340,7 +344,7 @@ async function toggleTarea(id, v) { const t = get(id); t.hecha = v; await save('
 function vEquipo(el) {
   el.innerHTML = `<div class="grid g2">${S.equipo.map(m => { const st = memberStats(m.nombre); const vw = visitasSemana(m.nombre); return `<div class="card pad" style="background:linear-gradient(160deg,#fff 50%,${m.color}14)">
     <div style="display:flex;gap:14px;align-items:center"><div class="av lg" style="background:linear-gradient(135deg,${m.color},${m.color}bb)">${esc(m.iniciales)}</div><div style="flex:1"><h2>${esc(m.nombre)}</h2><div class="muted small">${esc(m.rol || '')}</div><div class="small" style="margin-top:4px">${m.email ? `<span class="chip g">${ic('okc').replace('<svg', '<svg width="12" height="12"')} Acceso activo · ${esc(m.email)}</span>` : '<span class="chip a">Pendiente de email de acceso</span>'}</div></div></div>
-    <div class="grid g4" style="margin-top:16px;gap:8px">${[['Visitas semana', vw.total, 1], ['Programadas', vw.prog, 0], ['Realizadas', vw.hechas, 0], ['Captaciones', st.cap, 1]].map(([l, v, o]) => `<div style="background:${o ? '#fff1ea' : '#efefef'};border-radius:14px;padding:10px"><div class="num" style="font-size:17px;color:${o ? '#ff7440' : '#212934'}">${v}</div><div class="small muted">${l}</div></div>`).join('')}</div>
+    <div class="grid g4" style="margin-top:16px;gap:8px">${[['Visitas semana', vw.total, 1, `goF('visitas',{viT:'visitas',viA:${esc(JSON.stringify(m.nombre))}})`], ['Programadas', vw.prog, 0, `goF('visitas',{viT:'visitas',viA:${esc(JSON.stringify(m.nombre))}})`], ['Realizadas', vw.hechas, 0, `goF('visitas',{viT:'visitas',viA:${esc(JSON.stringify(m.nombre))}})`], ['Captaciones', st.cap, 1, `goF('captacion',{capMode:'lista',capA:${esc(JSON.stringify(m.nombre))}})`]].map(([l, v, o, act]) => `<div class="clk" onclick="${act}" style="background:${o ? '#fff1ea' : '#efefef'};border-radius:14px;padding:10px"><div class="num" style="font-size:17px;color:${o ? '#ff7440' : '#212934'}">${v}</div><div class="small muted">${l}</div></div>`).join('')}</div>
     <div class="fg" style="margin-top:14px"><div class="fld"><label>Email de acceso</label><input id="eqm_${m.id}" type="email" value="${esc(m.email || '')}" placeholder="email@…"></div><div class="fld"><label>Teléfono</label><input id="eqt_${m.id}" value="${esc(m.telefono || '')}"></div></div>
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm blue" onclick="saveMember('${m.id}')">Guardar</button>${m.telefono ? `<a class="btn sm" href="tel:${esc(m.telefono)}">${ic('phone')} Llamar</a>` : ''}</div></div>`; }).join('')}</div>
   <div class="card pad" style="margin-top:16px"><h3 style="margin-bottom:6px">Cómo entra Jesús Romero</h3><p class="small muted" style="margin:0">1) Escribe aquí su email y guarda. 2) Él abre la app, pulsa <b>Crear acceso</b> con ese email y elige su contraseña. 3) Instala la app desde el menú del navegador → <b>Añadir a pantalla de inicio</b>. Solo los emails de este equipo pueden ver los datos.</p></div>`;
