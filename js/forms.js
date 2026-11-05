@@ -364,7 +364,12 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('#ex
 
 (async function init() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
+  const hp = new URLSearchParams((location.hash || '').replace(/^#/, '') || location.search);
+  const hashErr = hp.get('error_description') || hp.get('error');
   const { data: { session } } = await sb.auth.getSession();
-  if (session) start(session); else showLogin();
+  if (location.hash && /access_token|error/.test(location.hash)) history.replaceState(null, '', location.pathname);
+  if (session) start(session);
+  else if (hashErr) showLogin(`<span style="color:var(--orange-dk)">${/expired|invalid|not found/i.test(hashErr) ? 'Ese enlace ya se ha usado o ha caducado. Si ya confirmaste tu email, entra directamente con tu email y contraseña.' : esc(hashErr)}</span>`);
+  else showLogin();
   sb.auth.onAuthStateChange((ev, s) => { if (ev === 'PASSWORD_RECOVERY') { const np = prompt('Escribe tu nueva contraseña (mín. 6 caracteres)'); if (np) sb.auth.updateUser({ password: np }).then(r => toast(r.error ? r.error.message : 'Contraseña actualizada')); } if (s && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) start(s); });
 })();
