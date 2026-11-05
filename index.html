@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Concept Studio Homes · CRM</title>
+<meta name="description" content="CRM inmobiliario de Concept Studio Homes">
+<meta name="theme-color" content="#16202c">
+<meta name="application-name" content="Concept Studio">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Concept Studio">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="https://rvuoqfsuswjnyytvitqb.supabase.co/storage/v1/object/public/csh-public/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://rvuoqfsuswjnyytvitqb.supabase.co/storage/v1/object/public/csh-public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<section id="login" class="hidden">
+  <div class="login-card">
+    <img class="logo" src="https://rvuoqfsuswjnyytvitqb.supabase.co/storage/v1/object/public/csh-public/logo.png" alt="Concept Studio Homes">
+    <div class="sub">CRM INMOBILIARIO</div>
+    <div class="tabs"><button data-m="in" class="on">Entrar</button><button data-m="up">Crear acceso</button><button data-m="re">Olvidé clave</button></div>
+    <form id="loginForm">
+      <div class="fld" style="margin-bottom:12px"><label>Email del equipo</label><input type="email" name="email" required autocomplete="email" placeholder="nombre@email.com"></div>
+      <div class="fld" id="pwFld" style="margin-bottom:16px"><label>Contraseña</label><input type="password" name="password" autocomplete="current-password" minlength="6"></div>
+      <button class="btn pri" style="width:100%;justify-content:center;padding:14px" id="loginBtn">Entrar</button>
+      <div class="login-msg" id="loginMsg"></div>
+      <p class="small muted" style="margin:10px 0 0;text-align:center">Acceso reservado a Jesús M.V. y Jesús Romero.</p>
+    </form>
+  </div>
+</section>
+
+<div id="app" class="hidden">
+  <aside class="sidebar">
+    <div class="brand"><img src="https://rvuoqfsuswjnyytvitqb.supabase.co/storage/v1/object/public/csh-public/logo.png" alt="Concept Studio Homes"></div>
+    <div class="brand-sub">CRM INMOBILIARIO</div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sync" id="syncState"><span class="dot"></span> Sincronizado</div>
+    <div class="side-user" id="sideUser"></div>
+  </aside>
+  <main class="main">
+    <header class="mob-head">
+      <img src="https://rvuoqfsuswjnyytvitqb.supabase.co/storage/v1/object/public/csh-public/logo.png" alt="Concept Studio Homes">
+      <div class="ttl" id="mobTitle">Dashboard</div>
+      <button class="bell" id="mobBell" aria-label="Avisos"></button>
+    </header>
+    <div class="topbar"><h1 id="pageTitle">Dashboard</h1><div class="actions" id="pageActions"></div></div>
+    <div class="content" id="view"></div>
+  </main>
+  <nav class="tabbar" id="tabbar"></nav>
+  <button class="fab" id="fab" aria-label="Nuevo"></button>
+</div>
+
+<script src="vendor/supabase.js"></script>
+<script src="js/core.js"></script>
+<script src="js/views.js"></script>
+<script src="js/forms.js"></script>
+</body>
+</html>
