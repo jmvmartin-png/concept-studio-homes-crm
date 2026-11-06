@@ -69,9 +69,9 @@ def parse_ficha(txt):
     r['fecha'] = g(r'\*\*Fecha publicación:\*\*\s*(\d{4}-\d{2}-\d{2})')
     pr = g(r'\*\*Precio detectado:\*\*\s*([\d.]+)\s*€')
     r['precio'] = int(pr.replace('.', '')) if pr else None
-    mm = g(r'\*\*m²:\*\*\s*([\d.,]+)')
+    mm = g(r'\*{0,2}m²:\*{0,2}\s*([\d.,]+)')
     r['m2'] = float(mm.replace(',', '.')) if mm else None
-    hb = g(r'\*\*Hab\.:\*\*\s*(\d+)')
+    hb = g(r'\*{0,2}Hab\.:\*{0,2}\s*(\d+)')
     r['hab'] = int(hb) if hb else None
     msg = txt.split('## Mensaje original', 1)[1] if '## Mensaje original' in txt else ''
     r['mensaje'] = msg.replace('**', '').strip()[:1500]
