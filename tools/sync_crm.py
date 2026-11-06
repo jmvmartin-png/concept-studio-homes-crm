@@ -78,9 +78,29 @@ def parse_ficha(txt):
     return r
 
 def read_ficha(path):
+    """Lee FICHA.md; si no existe, reconstruye el mismo formato desde 'FICHA <REF>.docx'."""
     f = os.path.join(path, 'FICHA.md')
+    if os.path.exists(f):
+        try:
+            return open(f, encoding='utf-8').read()
+        except Exception:
+            pass
+    docs = [x for x in os.listdir(path) if x.lower().startswith('ficha') and x.lower().endswith('.docx') and not x.startswith('~$')]
+    if not docs:
+        return ''
     try:
-        return open(f, encoding='utf-8').read()
+        import docx
+        d = docx.Document(os.path.join(path, docs[0]))
+        paras = [p.text for p in d.paragraphs]
+        title = next((t for t in paras[1:] if t.strip()), '')
+        lines = ['# ' + title, '']
+        if d.tables:
+            for row in d.tables[0].rows:
+                k, v = row.cells[0].text.strip(), row.cells[1].text.strip()
+                lines.append(f'- **{k}:** {v}')
+        if 'Mensaje original' in paras:
+            lines += ['', '## Mensaje original', ''] + paras[paras.index('Mensaje original') + 1:]
+        return '\n'.join(lines)
     except Exception:
         return ''
 
