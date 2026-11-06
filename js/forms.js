@@ -338,7 +338,13 @@ $('#loginForm').addEventListener('submit', async e => {
   if (loginMode === 'in') r = await sb.auth.signInWithPassword({ email, password });
   else if (loginMode === 'up') { if (!password || password.length < 6) { msg.textContent = 'La contraseña debe tener al menos 6 caracteres'; return; } r = await sb.auth.signUp({ email, password, options: { emailRedirectTo: redirect } }); if (!r.error && !r.data.session) { msg.style.color = 'var(--green)'; msg.textContent = 'Acceso creado. Revisa tu email para confirmarlo y vuelve a entrar.'; return; } }
   else { r = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirect }); if (!r.error) { msg.style.color = 'var(--green)'; msg.textContent = 'Te hemos enviado un enlace para crear una nueva contraseña.'; return; } }
-  if (r.error) { msg.style.color = 'var(--red)'; msg.textContent = r.error.message === 'Invalid login credentials' ? 'Email o contraseña incorrectos' : r.error.message; }
+  if (r.error) { msg.style.color = 'var(--red)'; const em = r.error.message || '', code = r.error.code || '';
+    msg.textContent = em === 'Invalid login credentials' ? 'Email o contraseña incorrectos'
+      : (code === 'over_email_send_rate_limit' || /rate limit/i.test(em)) ? 'Se ha alcanzado el límite de emails por hora del servidor. Espera 1 hora e inténtalo UNA sola vez (cada intento reinicia la espera).'
+      : (code === 'email_address_invalid' || /is invalid/i.test(em)) ? 'Ese email no es válido. Revisa que esté bien escrito (p. ej. @conceptstudiohomes.com).'
+      : /Email not confirmed/i.test(em) ? 'Tu email aún no está confirmado: abre el enlace que te llegó por correo.'
+      : /already registered/i.test(em) ? 'Ese email ya tiene acceso: usa la pestaña Entrar.'
+      : em; }
 });
 async function logout() { await sb.auth.signOut(); S.user = null; S.recs.clear(); try { localStorage.removeItem('csh_cache'); } catch (e) { } location.reload(); }
 
