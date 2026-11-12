@@ -304,3 +304,15 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 .clk:active{transform:scale(.98)}
 .bar-row.clk:hover span:first-child{color:var(--orange)}
 .hero-stats .clk:hover b{color:var(--orange-2)}
+
+/* tipo de inmueble y publicación */
+.tbadge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;border-radius:999px;background:#212934;color:#fff;font-size:12px;font-weight:500;white-space:nowrap;vertical-align:middle}
+.tbadge svg{width:16px;height:16px;color:var(--orange)}
+.pubchips{display:inline-flex;gap:4px}
+.pubc{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:999px;background:var(--orange);color:#fff;font-size:12px;font-weight:500}
+.pubc svg{width:13px;height:13px}
+.tbl tr.pub td{background:#fff3ec}
+.tbl tr.pub td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
+.tbl tr.pub:hover td{background:#ffe9dd}
+.lcard.pub{background:#fff3ec;box-shadow:inset 4px 0 0 var(--orange)}
+.pills label svg{flex:0 0 auto}

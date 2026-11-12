@@ -54,7 +54,8 @@ const C = {
   inmColor: { 'Captación': '#ff7440', 'Documentación': '#e2582a', 'Comercialización': '#212934', 'Negociación': '#444444', 'Arras / Reserva': '#6b717b', Cerrado: '#8a8f98', Descartado: '#b0b4ba' },
   visEstados: ['Programada', 'Realizada', 'Cancelada', 'No presentado'],
   intereses: ['Frío', 'Templado', 'Caliente'],
-  portales: ['Idealista', 'Fotocasa', 'Habitaclia', 'Pisos.com', 'Web CSH'],
+  portales: ['Idealista', 'Fotocasa', 'Habitaclia', 'Pisos.com', 'Web CSH', 'Instagram', 'LinkedIn'],
+  rrss: ['Instagram', 'LinkedIn'],
   docCats: ['Nota simple', 'Catastro', 'CEE', 'Ficha comercial', 'Planos', 'Fotos', 'Encargo / mandato', 'Contrato', 'Arras', 'Oferta firmada', 'Identificación', 'Factura', 'Parte de visita', 'Otro'],
   checklist: { nota: 'Nota simple', catastro: 'Catastro', cee: 'CEE', ficha: 'Ficha comercial', planos: 'Planos', fotos: 'Fotos', encargo: 'Encargo' },
   palette: ['#ff7440', '#212934', '#8a8f98', '#ffa47a', '#444444', '#c9ccd1', '#e2582a', '#6b717b', '#ffc9b0', '#2c343f', '#b0b4ba', '#ff8a5c']
