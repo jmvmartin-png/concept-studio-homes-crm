@@ -148,6 +148,7 @@ async function toggleActivo(id) {
     r.estadoPrevio = r.estado; r.inactivo = true; r.fechaInactivo = today();
     r.estado = tipo === 'inmueble' ? 'Descartado' : 'Perdido';
   } else {
+    if (!confirm(`¿Reactivar ${nombre}? Volverá al estado «${r.estadoPrevio || (tipo === 'inmueble' ? 'Comercialización' : 'Nuevo')}».`)) return;
     r.inactivo = false; r.estado = r.estadoPrevio || (tipo === 'inmueble' ? 'Comercialización' : 'Nuevo');
     delete r.estadoPrevio; delete r.fechaInactivo;
   }
