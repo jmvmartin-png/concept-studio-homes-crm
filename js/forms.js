@@ -117,10 +117,10 @@ function openInmueble(id, tab, preset = {}) {
   const visH = `<div class="fs"><h3>Visitas (${vis.length})</h3><button class="btn sm blue" style="margin-bottom:10px" onclick="openVisita(null,{inmuebleId:'${p.id}'})">${ic('plus')} Nueva visita</button>${vis.map(v => `<div class="doc" style="cursor:pointer" onclick="openVisita('${v.id}')"><div class="di" style="background:var(--purple-soft);color:var(--purple)">${ic('eye')}</div><div class="dn"><b>${esc(v.cliente || '')} ${v.firma ? '· firmado' : ''}</b><span class="small muted">${fdt(v.fecha)} · ${esc(v.estado)} · ${esc(v.interes || '')}</span></div></div>`).join('') || '<div class="small muted">Sin visitas</div>'}</div>`;
   const sh = openSheet({
     title: (isNew ? 'Nuevo inmueble · ' : '') + esc(p.ref) + (p.direccion ? ' · ' + esc(p.direccion) : ''),
-    sub: `<div style="display:flex;gap:6px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center">${tipoBadge(p.tipo)}<span class="chip" style="background:${C.inmColor[p.estado]}22;color:${C.inmColor[p.estado]}">${esc(p.estado || '')}</span>${pubChips(p)}</div>`,
+    sub: `<div style="display:flex;gap:6px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center">${tipoBadge(p.tipo)}${p.inactivo ? '<span class="chip n">Desactivado</span>' : ''}<span class="chip" style="background:${C.inmColor[p.estado]}22;color:${C.inmColor[p.estado]}">${esc(p.estado || '')}</span>${pubChips(p)}</div>`,
     head: `${p.telefono ? `<a class="btn icon" href="tel:${esc(p.telefono)}">${ic('phone')}</a>` : ''}<button class="btn icon" title="Extraer de anuncio" onclick="openExtract('inmueble')">${ic('wand')}</button>`,
     tabs: [{ k: 'ficha', l: 'Ficha', html: `<form id="frm">${ficha}</form>` }, { k: 'cruces', l: `Cruces${ms.length ? ' · ' + ms.length : ''}`, html: cruces }, { k: 'visitas', l: `Visitas · ${vis.length}`, html: visH }, { k: 'docs', l: `Documentos · ${(p.adjuntos || []).length}`, html: docsHTML('inmueble', p.id), onMount: pn => bindDrop(pn, 'inmueble', p.id) }, { k: 'act', l: 'Actividad', html: actHTML(p.id) }],
-    footer: `${!isNew ? `<button class="btn ghost danger" onclick="delRec('${p.id}','inmueble')">${ic('trash')}</button>` : ''}<button class="btn" onclick="shareInm('${p.id}')">${ic('send')} Compartir</button><button class="btn" onclick="openOperacion(null,{inmuebleId:'${p.id}',titulo:${esc(JSON.stringify((p.operacion || '') + ' ' + p.ref))},importe:${num(p.precio) || 'null'}})">${ic('pipe')} Operación</button><button class="btn pri" onclick="saveInm()">${ic('check')} Guardar</button>`
+    footer: `${!isNew ? `<button class="btn ghost danger" onclick="delRec('${p.id}','inmueble')">${ic('trash')}</button>` : ''}${!isNew ? btnActivo(p) : ''}<button class="btn" onclick="shareInm('${p.id}')">${ic('send')} Compartir</button><button class="btn" onclick="openOperacion(null,{inmuebleId:'${p.id}',titulo:${esc(JSON.stringify((p.operacion || '') + ' ' + p.ref))},importe:${num(p.precio) || 'null'}})">${ic('pipe')} Operación</button><button class="btn pri" onclick="saveInm()">${ic('check')} Guardar</button>`
   });
   S._form = { tipo: 'inmueble', base: p, isNew };
   S._pendingSave = () => saveInm(true);
@@ -137,6 +137,24 @@ async function saveInm(keepOpen) {
   if (!prev) logAct(base.id, 'Inmueble dado de alta'); else { if (prev.estado !== o.estado) logAct(base.id, `Estado: ${prev.estado} → ${o.estado}`); if (num(prev.precio) !== num(o.precio)) logAct(base.id, `Precio: ${eur(prev.precio)} → ${eur(o.precio)}`); }
   S._form.base = get(base.id);
   if (!keepOpen) closeSheet();
+}
+/* ---------- desactivar / reactivar (inmuebles y demandas) ---------- */
+const btnActivo = r => `<button class="btn ${r.inactivo ? 'pri' : ''}" onclick="toggleActivo('${r.id}')">${ic(r.inactivo ? 'okc' : 'x')} ${r.inactivo ? 'Reactivar' : 'Desactivar'}</button>`;
+async function toggleActivo(id) {
+  const rec = S.recs.get(id); if (!rec) return toast('Guarda la ficha primero');
+  const tipo = rec.tipo, r = get(id), nombre = r.ref || r.nombre || id;
+  if (!r.inactivo) {
+    if (!confirm(`¿Desactivar ${nombre}? Dejará de verse en los listados, no cruzará ni generará avisos. Podrás reactivarlo cuando quieras.`)) return;
+    r.estadoPrevio = r.estado; r.inactivo = true; r.fechaInactivo = today();
+    r.estado = tipo === 'inmueble' ? 'Descartado' : 'Perdido';
+  } else {
+    r.inactivo = false; r.estado = r.estadoPrevio || (tipo === 'inmueble' ? 'Comercialización' : 'Nuevo');
+    delete r.estadoPrevio; delete r.fechaInactivo;
+  }
+  await save(tipo, r, { silent: true });
+  logAct(id, r.inactivo ? 'Desactivado (estado anterior: ' + (r.estadoPrevio || '—') + ')' : 'Reactivado · estado ' + r.estado);
+  toast(r.inactivo ? nombre + ' desactivado' : nombre + ' reactivado');
+  closeSheet();
 }
 function shareInm(id) {
   const p = get(id); const txt = `${p.tipo} en ${p.operacion?.toLowerCase()} · ${p.direccion || ''} ${p.zona ? '(' + p.zona + ')' : ''}\n${p.m2c ? m2(p.m2c) + ' · ' : ''}${p.hab ? p.hab + ' hab. · ' : ''}${eur(p.precio)}\nRef. ${p.ref} · Concept Studio Homes`;
@@ -165,10 +183,10 @@ function openContacto(id, tab, preset = {}) {
   const vis = list('visita').filter(v => v.contactoId === c.id);
   const sh = openSheet({
     title: isNew ? 'Nueva captación' : esc(c.nombre || 'Contacto'),
-    sub: !isNew ? `<div style="display:flex;gap:6px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center"><span class="chip" style="background:${scoreColor(sc)}1f;color:${scoreColor(sc)}">★ Score ${sc}</span><span class="chip ${isOferta(c) || esColaborador(c) ? 'p' : 'b'}">${esc(intentLabel(c))}</span><span class="chip" style="background:${C.leadColor[c.estado]}22;color:${C.leadColor[c.estado]}">${esc(c.estado)}</span>${ms.length ? `<span class="chip o">${ms.length} cruces</span>` : ''}<span style="flex:1"></span>${c.telefono ? `<a class="btn sm" href="tel:${esc(c.telefono)}">${ic('phone')}</a><a class="btn sm green" target="_blank" href="https://wa.me/${phoneDigits(c.telefono)}">${ic('wa')}</a>` : ''}${c.email ? `<a class="btn sm" href="mailto:${esc(c.email)}">${ic('mail')}</a>` : ''}</div>` : '',
+    sub: !isNew ? `<div style="display:flex;gap:6px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center">${c.inactivo ? '<span class="chip n">Desactivado</span>' : ''}<span class="chip" style="background:${scoreColor(sc)}1f;color:${scoreColor(sc)}">★ Score ${sc}</span><span class="chip ${isOferta(c) || esColaborador(c) ? 'p' : 'b'}">${esc(intentLabel(c))}</span><span class="chip" style="background:${C.leadColor[c.estado]}22;color:${C.leadColor[c.estado]}">${esc(c.estado)}</span>${ms.length ? `<span class="chip o">${ms.length} cruces</span>` : ''}<span style="flex:1"></span>${c.telefono ? `<a class="btn sm" href="tel:${esc(c.telefono)}">${ic('phone')}</a><a class="btn sm green" target="_blank" href="https://wa.me/${phoneDigits(c.telefono)}">${ic('wa')}</a>` : ''}${c.email ? `<a class="btn sm" href="mailto:${esc(c.email)}">${ic('mail')}</a>` : ''}</div>` : '',
     head: `<button class="btn icon" title="Extraer datos de un texto" onclick="openExtract('contacto')">${ic('wand')}</button>`,
     tabs: [{ k: 'ficha', l: 'Ficha', html: `<form id="frm">${ficha}</form>` }, { k: 'cruces', l: `Cruces${ms.length ? ' · ' + ms.length : ''}`, html: cruces }, { k: 'docs', l: `Documentos · ${(c.adjuntos || []).length}`, html: docsHTML('contacto', c.id), onMount: pn => bindDrop(pn, 'contacto', c.id) }, { k: 'act', l: `Actividad${vis.length ? ' · ' + vis.length + ' visitas' : ''}`, html: actHTML(c.id) }],
-    footer: `${!isNew ? `<button class="btn ghost danger" onclick="delRec('${c.id}','contacto')">${ic('trash')}</button>` : ''}${isOferta(c) && !c.inmuebleId && !isNew ? `<button class="btn" onclick="convertToInm('${c.id}')">${ic('home')} Convertir en inmueble</button>` : ''}${!isNew ? `<button class="btn" onclick="openVisita(null,{contactoId:'${c.id}',cliente:${esc(JSON.stringify(c.nombre || ''))},telefono:${esc(JSON.stringify(c.telefono || ''))}})">${ic('cal')} Visita</button>` : ''}<button class="btn pri" onclick="saveCon()">${ic('check')} Guardar</button>`
+    footer: `${!isNew ? `<button class="btn ghost danger" onclick="delRec('${c.id}','contacto')">${ic('trash')}</button>` : ''}${!isNew ? btnActivo(c) : ''}${isOferta(c) && !c.inmuebleId && !isNew ? `<button class="btn" onclick="convertToInm('${c.id}')">${ic('home')} Convertir en inmueble</button>` : ''}${!isNew ? `<button class="btn" onclick="openVisita(null,{contactoId:'${c.id}',cliente:${esc(JSON.stringify(c.nombre || ''))},telefono:${esc(JSON.stringify(c.telefono || ''))}})">${ic('cal')} Visita</button>` : ''}<button class="btn pri" onclick="saveCon()">${ic('check')} Guardar</button>`
   });
   S._form = { tipo: 'contacto', base: c, isNew }; S._pendingSave = () => saveCon(true);
   if (tab) sh.tab(tab);

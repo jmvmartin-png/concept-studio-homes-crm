@@ -203,6 +203,7 @@ function zonaMatch(zonas, p) {
 }
 function matchScore(c, p) {
   if (!opCompat(c.intent, p.operacion)) return null;
+  if (p.inactivo || c.inactivo) return null;
   if (['Cerrado', 'Descartado'].includes(p.estado) || c.estado === 'Perdido') return null;
   let s = 0; const why = [];
   const tipos = c.tipos || []; const zonas = (c.zonas || '').split(/[,;]+/).map(x => x.trim()).filter(Boolean);
@@ -266,7 +267,7 @@ const scoreColor = s => s >= 70 ? '#ff7440' : s >= 45 ? '#444444' : '#9aa0a8';
 function systemAlerts() {
   const out = []; const t = today();
   for (const c of list('contacto')) {
-    if (['Perdido', 'Cliente'].includes(c.estado)) continue;
+    if (c.inactivo || ['Perdido', 'Cliente'].includes(c.estado)) continue;
     if (c.proximaFecha && c.proximaFecha < t) out.push({ k: 'seg', lvl: 'bad', ic: 'clock', t: 'Seguimiento vencido · ' + (c.nombre || 'Contacto'), s: (c.proximaAccion || 'Acción pendiente') + ' · ' + fdate(c.proximaFecha), open: () => openContacto(c.id), tel: c.telefono });
     else if (c.proximaFecha === t) out.push({ k: 'seg', lvl: 'warn', ic: 'clock', t: 'Seguimiento hoy · ' + (c.nombre || 'Contacto'), s: c.proximaAccion || 'Acción pendiente', open: () => openContacto(c.id), tel: c.telefono });
     if (c.estado === 'Nuevo' && daysAgo(c.fechaAlta || c._c) >= 1) out.push({ k: 'lead', lvl: 'warn', ic: 'user', t: 'Lead sin contactar · ' + (c.nombre || ''), s: 'Entró ' + fdate(c.fechaAlta || c._c) + ' · ' + (c.origen || ''), open: () => openContacto(c.id), tel: c.telefono });
@@ -275,6 +276,7 @@ function systemAlerts() {
   for (const x of list('tarea')) if (!x.hecha && x.fecha && x.fecha < t) out.push({ k: 'tar', lvl: 'bad', ic: 'check', t: 'Tarea vencida · ' + x.titulo, s: fdate(x.fecha) + ' · ' + (x.agente || ''), open: () => openTarea(x.id) });
   const vis = list('visita');
   for (const p of list('inmueble')) {
+    if (p.inactivo) continue;
     if (p.estado === 'Comercialización') {
       const last = vis.filter(v => v.inmuebleId === p.id).map(v => v.fecha).sort().pop();
       if (!last || daysAgo(last) > 30) out.push({ k: 'frio', lvl: 'warn', ic: 'snow', t: 'Inmueble frío · ' + p.ref, s: (p.direccion || '') + ' · ' + (last ? 'última visita ' + fdate(last) : 'sin visitas registradas'), open: () => openInmueble(p.id) });

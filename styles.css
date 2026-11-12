@@ -316,3 +316,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 .tbl tr.pub:hover td{background:#ffe9dd}
 .lcard.pub{background:#fff3ec;box-shadow:inset 4px 0 0 var(--orange)}
 .pills label svg{flex:0 0 auto}
+
+/* desactivados */
+.tbl tr.inact td{opacity:.5}
+.lcard.inact,.kcard.inact{opacity:.5}
