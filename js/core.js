@@ -43,7 +43,7 @@ const C = {
   leadEstados: ['Nuevo', 'Contactado', 'Cualificado', 'Visitando', 'Negociación', 'Cliente', 'Perdido'],
   leadColor: { Nuevo: '#ff7440', Contactado: '#ff9a6b', Cualificado: '#8a8f98', Visitando: '#5c6370', 'Negociación': '#444444', Cliente: '#212934', Perdido: '#b0b4ba' },
   origenes: ['Idealista', 'Fotocasa', 'Habitaclia', 'Web CSH', 'Instagram', 'LinkedIn', 'WhatsApp', 'Referido', 'Puerta fría', 'Colaborador', 'Llamada', 'Otro'],
-  roles: ['Comprador', 'Inquilino', 'Inversor', 'Propietario', 'Colaborador', 'Agencia', 'Intermediario'],
+  roles: ['Comprador', 'Inquilino', 'Inversor', 'Propietario', 'Colaborador', 'Agencia', 'Intermediario', 'Propios'],
   temps: ['Frío', 'Templado', 'Caliente'],
   financiacion: ['Sin definir', 'Contado', 'Hipoteca preaprobada', 'Necesita hipoteca', 'Fondos / sociedad'],
   plazos: ['Inmediato', '< 3 meses', '3–6 meses', '6–12 meses', 'Sin prisa'],

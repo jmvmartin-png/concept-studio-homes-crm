@@ -320,3 +320,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 /* desactivados */
 .tbl tr.inact td{opacity:.5}
 .lcard.inact,.kcard.inact{opacity:.5}
+
+/* perfiles del contacto */
+.perfiles{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.perfil{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;background:#efefef;color:#212934;border:1px solid #dddddd}
+.perfil.propio{background:var(--orange);color:#fff;border-color:var(--orange)}
+.perfil svg{width:11px;height:11px}
