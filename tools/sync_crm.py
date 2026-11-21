@@ -77,38 +77,61 @@ def parse_ficha(txt):
     r['mensaje'] = msg.replace('**', '').strip()[:1500]
     return r
 
-def read_ficha(path):
-    """Lee FICHA.md; si no existe, reconstruye el mismo formato desde 'FICHA <REF>.docx'."""
-    f = os.path.join(path, 'FICHA.md')
-    if os.path.exists(f):
-        try:
-            return open(f, encoding='utf-8').read()
-        except Exception:
-            pass
-    docs = [x for x in os.listdir(path) if x.lower().startswith('ficha') and x.lower().endswith('.docx') and not x.startswith('~$')]
-    if not docs:
-        return ''
-    try:
-        import docx
-        d = docx.Document(os.path.join(path, docs[0]))
-        paras = [p.text for p in d.paragraphs]
-        title = next((t for t in paras[1:] if t.strip()), '')
-        lines = ['# ' + title, '']
-        if d.tables:
-            for row in d.tables[0].rows:
+def _docx_a_md(fp):
+    import docx
+    d = docx.Document(fp)
+    paras = [p.text for p in d.paragraphs]
+    title = next((t for t in paras[1:] if t.strip()), '')
+    lines = ['# ' + title, '']
+    if d.tables:
+        for row in d.tables[0].rows:
+            if len(row.cells) >= 2:
                 k, v = row.cells[0].text.strip(), row.cells[1].text.strip()
                 lines.append(f'- **{k}:** {v}')
-        if 'Mensaje original' in paras:
-            lines += ['', '## Mensaje original', ''] + paras[paras.index('Mensaje original') + 1:]
-        return '\n'.join(lines)
+    if 'Mensaje original' in paras:
+        lines += ['', '## Mensaje original', ''] + paras[paras.index('Mensaje original') + 1:]
+    elif not d.tables:
+        lines += ['', '## Mensaje original', ''] + paras
+    return '\n'.join(lines)
+
+def read_ficha(path):
+    """Devuelve (texto_md, archivo). Prioridad: 'FICHA <REF>.docx' (la ficha que hacemos en Word) >
+    FICHA.md > cualquier otro archivo con 'ficha' en el nombre (.docx o .pdf, este solo como notas)."""
+    try:
+        files = [x for x in os.listdir(path) if not x.startswith('~$') and os.path.isfile(os.path.join(path, x))]
     except Exception:
-        return ''
+        return '', ''
+    low = {x: x.lower() for x in files}
+    cand = [x for x in files if low[x].startswith('ficha') and low[x].endswith('.docx')]
+    for x in cand:
+        try:
+            return _docx_a_md(os.path.join(path, x)), x
+        except Exception:
+            pass
+    if 'FICHA.md' in files:
+        try:
+            return open(os.path.join(path, 'FICHA.md'), encoding='utf-8').read(), 'FICHA.md'
+        except Exception:
+            pass
+    otros = [x for x in files if 'ficha' in low[x] and low[x].endswith(('.docx', '.pdf'))]
+    for x in sorted(otros):
+        fp = os.path.join(path, x)
+        try:
+            if x.lower().endswith('.docx'):
+                return _docx_a_md(fp), x
+            import subprocess
+            t = subprocess.run(['pdftotext', '-layout', fp, '-'], capture_output=True, text=True, timeout=60).stdout
+            if t.strip():
+                return '## Mensaje original\n\n' + t.strip(), x
+        except Exception:
+            pass
+    return '', ''
 
 def count_files(path):
     nd = nf = 0
     for root, dirs, files in os.walk(path):
         for fn in files:
-            if fn == 'FICHA.md':
+            if fn == 'FICHA.md' or fn.startswith('~$'):
                 continue
             if re.search(r'\.(jpe?g|png|webp|heic)$', fn, re.I) or re.search('foto', root, re.I):
                 nf += 1
@@ -129,7 +152,7 @@ def main():
     existing = set(l.strip() for l in open(a.existing, encoding='utf-8') if l.strip())
     hoy = a.hoy
     rows = []          # (id, tipo, data)
-    resumen = {'inmuebles': [], 'demandas': [], 'colaboradores': []}
+    resumen = {'inmuebles': [], 'demandas': [], 'colaboradores': [], 'sinFicha': []}
 
     def add(id_, tipo, data):
         if id_ in existing:
@@ -159,7 +182,9 @@ def main():
             op = segs[0] if segs else ''
             tipo = segs[1] if len(segs) > 1 else ''
             zona = ' '.join(segs[2:])
-            fi = parse_ficha(read_ficha(path))
+            txt, farch = read_ficha(path)
+            fi = parse_ficha(txt)
+            if not farch: resumen['sinFicha'].append(ref)
             T = norm(tipo).upper()
             intent = 'alquilar' if ('ALQUILER' in op.upper() and 'COMPRA' not in op.upper()) else \
                      ('invertir' if re.search('INVERSION|FLIP|HOTEL|SUELO|EDIFICIO', T) else 'comprar')
@@ -170,7 +195,7 @@ def main():
                     'precioMax': fi.get('precio'), 'm2Min': fi.get('m2'), 'habMin': fi.get('hab'), 'estado': 'Nuevo',
                     'temperatura': 'Templado', 'origen': 'WhatsApp', 'agente': a.agente, 'fechaAlta': fi.get('fecha') or hoy,
                     'roles': ['Inquilino' if intent == 'alquilar' else 'Inversor' if intent == 'invertir' else 'Comprador'],
-                    'extras': [], 'adjuntos': [], 'dmRef': ref, 'carpeta': 'NUESTROS CAPTACION\\' + name,
+                    'extras': [], 'adjuntos': [], 'dmRef': ref, 'fichaArchivo': farch, 'carpeta': 'NUESTROS CAPTACION\\' + name,
                     'notas': (('Origen: ' + fi['origen'] + '\n\n') if fi.get('origen') else '') + fi.get('mensaje', ''),
                     'proximaAccion': 'Contactar y cualificar', 'proximaFecha': ''}
             if add('con_' + ref, 'contacto', data):
@@ -186,7 +211,9 @@ def main():
             tseg = re.split(r'\s+-\s+', name)
             tipo_seg = tseg[-2] if colab and len(tseg) >= 3 else ''
             tipo = map_tipo(tipo_seg) or next((map_tipo(s) for s in segs if map_tipo(s)), '')
-            fi = parse_ficha(read_ficha(path))
+            txt, farch = read_ficha(path)
+            fi = parse_ficha(txt)
+            if not farch: resumen['sinFicha'].append(ref)
             direccion = fi['titulo'].split(' · ')[-1] if fi.get('titulo') else ' '.join(s for s in segs if not map_tipo(s))
             nd, nf = count_files(path)
             cid = colaborador(colab, fi.get('telefono')) if colab else ''
@@ -197,7 +224,7 @@ def main():
                     'rol': 'Colaborador' if colab else '', 'telefono': fi.get('telefono', ''), 'agente': a.agente,
                     'fecha': fi.get('fecha') or hoy, 'prioridad': 'Media', 'exclusiva': 'No', 'docs': {}, 'portales': {},
                     'adjuntos': [], 'extras': [], 'nDocs': nd, 'nFotos': nf, 'origen': fi.get('origen', ''),
-                    'notas': fi.get('mensaje', ''), 'carpeta': 'NUESTROS CAPTACION\\' + name}
+                    'notas': fi.get('mensaje', ''), 'fichaArchivo': farch, 'carpeta': 'NUESTROS CAPTACION\\' + name}
             if add('inm_' + ref, 'inmueble', data):
                 resumen['inmuebles'].append(name)
                 quien = f' con {colab}' if colab else ''
