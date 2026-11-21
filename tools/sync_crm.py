@@ -57,6 +57,10 @@ def zonas(z):
     out += [w for w in s.split() if w not in {'Y', 'DE', 'DEL', 'LA', 'EL', 'NORTE', 'PRIME', 'PERIFERIA', 'CAPITALES'}]
     return ', '.join(title(x) for x in out)
 
+TIPO_PAL = re.compile(r'\b(EDIFICIO|PISO|ATICO|ÁTICO|DUPLEX|DÚPLEX|LOCAL( RESTAURANTE)?|CHALETS?|CASA|ESTUDIOS?|LOFT|OFICINA|NAVES?|SOLAR|SUELO|GARAJE|FINCA|HOTEL|ALQUILER|BAJO( CON JARDIN)?|VIVIENDA|PROPIEDAD)\b', re.I)
+def quitar_tipo(seg):
+    return re.sub(r'\s{2,}', ' ', TIPO_PAL.sub('', seg)).strip(' -·')
+
 def limpiar_nombre(seg):
     """'MADRID Fernando Palomino' -> 'Fernando Palomino': quita las palabras en MAYÚSCULAS del principio."""
     w = seg.split()
@@ -69,7 +73,7 @@ def parse_ficha(txt):
     if not txt:
         return r
     g = lambda rx: (re.search(rx, txt, re.M).group(1).strip() if re.search(rx, txt, re.M) else '')
-    r['titulo'] = g(r'^#\s*(.+)$')
+    r['titulo'] = g(r'^#\s+(.+)$')
     r['telefono'] = re.sub('(?i)ver en el grupo', '', g(r'\*\*Teléfono:\*\*\s*(.+)$')).strip()
     r['operacion'] = g(r'\*\*Operación:\*\*\s*(\w+)')
     r['origen'] = g(r'\*\*Origen:\*\*\s*(.+)$')
@@ -127,9 +131,11 @@ def read_ficha(path):
             if x.lower().endswith('.docx'):
                 return _docx_a_md(fp), x
             import subprocess
-            t = subprocess.run(['pdftotext', '-layout', fp, '-'], capture_output=True, text=True, timeout=60).stdout
-            if t.strip():
-                return '## Mensaje original\n\n' + t.strip(), x
+            t = subprocess.run(['pdftotext', fp, '-'], capture_output=True, text=True, timeout=60).stdout
+            t = '\n'.join(re.sub(r'[ \t]+', ' ', l).strip() for l in t.splitlines())
+            t = re.sub(r'\n{3,}', '\n\n', t).strip()
+            if t:
+                return '## Mensaje original\n\n' + t, x
         except Exception:
             pass
     return '', ''
@@ -221,7 +227,7 @@ def main():
             txt, farch = read_ficha(path)
             fi = parse_ficha(txt)
             if not farch: resumen['sinFicha'].append(ref)
-            direccion = fi['titulo'].split(' · ')[-1] if fi.get('titulo') else ' '.join(s for s in segs if not map_tipo(s))
+            direccion = fi['titulo'].split(' · ')[-1] if fi.get('titulo') else ' - '.join(q for q in (quitar_tipo(s) for s in segs) if q and not re.fullmatch(r'\d+', q))
             nd, nf = count_files(path)
             cid = colaborador(colab, fi.get('telefono')) if colab else ''
             data = {'ref': ref, 'estado': 'Captación', 'operacion': fi.get('operacion') or ('Alquiler' if 'ALQUILER' in name.upper() else 'Venta'),
