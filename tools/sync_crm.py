@@ -57,6 +57,13 @@ def zonas(z):
     out += [w for w in s.split() if w not in {'Y', 'DE', 'DEL', 'LA', 'EL', 'NORTE', 'PRIME', 'PERIFERIA', 'CAPITALES'}]
     return ', '.join(title(x) for x in out)
 
+def limpiar_nombre(seg):
+    """'MADRID Fernando Palomino' -> 'Fernando Palomino': quita las palabras en MAYÚSCULAS del principio."""
+    w = seg.split()
+    while len(w) > 1 and not re.search('[a-záéíóúñü]', w[0]):
+        w.pop(0)
+    return ' '.join(w)
+
 def parse_ficha(txt):
     r = {}
     if not txt:
@@ -178,7 +185,7 @@ def main():
             if 'con_' + ref in existing:
                 continue
             segs = [x.strip() for x in re.split(r'\s+-\s+', name[m_dm.end():]) if x.strip()]
-            nombre = segs.pop() if len(segs) > 1 and re.search('[a-záéíóúñ]', segs[-1]) else ref
+            nombre = limpiar_nombre(segs.pop()) if len(segs) > 1 and re.search('[a-záéíóúñ]', segs[-1]) else ref
             op = segs[0] if segs else ''
             tipo = segs[1] if len(segs) > 1 else ''
             zona = ' '.join(segs[2:])
@@ -207,7 +214,7 @@ def main():
             if 'inm_' + ref in existing:
                 continue
             segs = [x.strip() for x in re.split(r'\s*-\s*', name[m_pv.end():]) if x.strip()]
-            colab = segs.pop() if segs and re.search('[a-záéíóúñ]', segs[-1]) else None
+            colab = limpiar_nombre(segs.pop()) if segs and re.search('[a-záéíóúñ]', segs[-1]) else None
             tseg = re.split(r'\s+-\s+', name)
             tipo_seg = tseg[-2] if colab and len(tseg) >= 3 else ''
             tipo = map_tipo(tipo_seg) or next((map_tipo(s) for s in segs if map_tipo(s)), '')
