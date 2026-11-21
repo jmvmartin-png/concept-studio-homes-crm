@@ -60,7 +60,7 @@ def zonas(z):
 def limpiar_nombre(seg):
     """'MADRID Fernando Palomino' -> 'Fernando Palomino': quita las palabras en MAYÚSCULAS del principio."""
     w = seg.split()
-    while len(w) > 1 and not re.search('[a-záéíóúñü]', w[0]):
+    while len(w) > 1 and re.fullmatch('[A-ZÁÉÍÓÚÑÜ]{3,}', w[0]):
         w.pop(0)
     return ' '.join(w)
 
